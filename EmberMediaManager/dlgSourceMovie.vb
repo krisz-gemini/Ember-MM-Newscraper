@@ -201,6 +201,7 @@ Public Class dlgSourceMovie
                 chkUseFolderName.Checked = s.UseFolderName
                 txtSourceName.Text = s.Name
                 txtSourcePath.Text = s.Path
+                chkFollowReparsePoints.Checked = s.FollowReparsePoints
             End If
         Else
             If cbSourceLanguage.Items.Count > 0 Then
@@ -231,9 +232,9 @@ Public Class dlgSourceMovie
         Using SQLtransaction As SQLite.SQLiteTransaction = Master.DB.MyVideosDBConn.BeginTransaction()
             Using SQLcommand As SQLite.SQLiteCommand = Master.DB.MyVideosDBConn.CreateCommand()
                 If Not _id = -1 Then
-                    SQLcommand.CommandText = String.Concat("UPDATE moviesource SET strName = (?), strPath = (?), bRecursive = (?), bFoldername = (?), bSingle = (?), strLastScan = (?), bExclude = (?), bGetYear = (?) , strLanguage = (?) WHERE idSource =", _id, ";")
+                    SQLcommand.CommandText = String.Concat("UPDATE moviesource SET strName = (?), strPath = (?), bRecursive = (?), bFoldername = (?), bSingle = (?), strLastScan = (?), bExclude = (?), bGetYear = (?) , strLanguage = (?), bFollowReparsePoints = (?) WHERE idSource =", _id, ";")
                 Else
-                    SQLcommand.CommandText = "INSERT OR REPLACE INTO moviesource (strName, strPath, bRecursive, bFoldername, bSingle, strLastScan, bExclude, bGetYear, strLanguage) VALUES (?,?,?,?,?,?,?,?,?);"
+                    SQLcommand.CommandText = "INSERT OR REPLACE INTO moviesource (strName, strPath, bRecursive, bFoldername, bSingle, strLastScan, bExclude, bGetYear, strLanguage, bFollowReparsePoints) VALUES (?,?,?,?,?,?,?,?,?,?);"
                 End If
                 Dim parName As SQLite.SQLiteParameter = SQLcommand.Parameters.Add("parName", DbType.String, 0, "strNme")
                 Dim parPath As SQLite.SQLiteParameter = SQLcommand.Parameters.Add("parPath", DbType.String, 0, "strPath")
@@ -244,6 +245,7 @@ Public Class dlgSourceMovie
                 Dim parExclude As SQLite.SQLiteParameter = SQLcommand.Parameters.Add("parExclude", DbType.Boolean, 0, "bExclude")
                 Dim parGetYear As SQLite.SQLiteParameter = SQLcommand.Parameters.Add("parGetYear", DbType.Boolean, 0, "bGetYear")
                 Dim parLanguage As SQLite.SQLiteParameter = SQLcommand.Parameters.Add("parLanguage", DbType.String, 0, "strLanguage")
+                Dim parFollowReparsePoints As SQLite.SQLiteParameter = SQLcommand.Parameters.Add("parFollowReparsePoints", DbType.Boolean, 0, "bFollowReparsePoints")
                 parName.Value = txtSourceName.Text.Trim
                 parPath.Value = strSourcePath
                 parRecur.Value = chkScanRecursive.Checked
@@ -252,6 +254,8 @@ Public Class dlgSourceMovie
                 parLastScan.Value = DateTime.Now
                 parExclude.Value = chkExclude.Checked
                 parGetYear.Value = chkGetYear.Checked
+                parFollowReparsePoints.Value = chkFollowReparsePoints.Checked
+
                 If Not String.IsNullOrEmpty(cbSourceLanguage.Text) Then
                     parLanguage.Value = APIXML.ScraperLanguagesXML.Languages.FirstOrDefault(Function(l) l.Description = cbSourceLanguage.Text).Abbreviation
                 Else
@@ -281,6 +285,7 @@ Public Class dlgSourceMovie
         chkUseFolderName.Text = Master.eLang.GetString(203, "Use Folder Name for Initial Listing")
         chkScanRecursive.Text = Master.eLang.GetString(204, "Scan Recursively")
         fbdBrowse.Description = Master.eLang.GetString(205, "Select the parent folder for your movie folders/files.")
+        chkFollowReparsePoints.Text = Master.eLang.GetString(1494, "Follow Junctions")
 
         cbSourceLanguage.Items.Clear()
         cbSourceLanguage.Items.AddRange((From lLang In APIXML.ScraperLanguagesXML.Languages Select lLang.Description).ToArray)

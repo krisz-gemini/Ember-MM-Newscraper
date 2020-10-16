@@ -263,7 +263,8 @@ CREATE TABLE tag (
 CREATE TABLE taglinks (
         idTag       integer,
         idMedia     integer,
-        media_type  text
+        media_type  text,
+		tag_order	real
         );
 
         CREATE UNIQUE INDEX ix_taglinks_1
@@ -719,9 +720,18 @@ CREATE VIEW episodelist
         LEFT OUTER JOIN actors AS directors ON (directors.idActor = directorlink.idDirector)
         GROUP BY episode.idEpisode;
 
+
 CREATE VIEW movielist
-        AS
-        SELECT
+AS
+SELECT ordered_movies.*,
+        GROUP_CONCAT(DISTINCT Country) AS Country,
+        GROUP_CONCAT(DISTINCT Credits) AS Credits,
+        GROUP_CONCAT(DISTINCT Director) AS Director,
+        GROUP_CONCAT(DISTINCT Genre) AS Genre,
+        GROUP_CONCAT(DISTINCT Studio) AS Studio,
+        GROUP_CONCAT(DISTINCT Tag) AS 'Tag'
+FROM (
+	SELECT
         movie.*,
         CASE WHEN movie.SortTitle IS NOT '' THEN movie.SortTitle ELSE movie.ListTitle END AS SortedTitle,
         source.strName AS Source,
@@ -732,12 +742,12 @@ CREATE VIEW movielist
         fanart.url AS FanartPath,
         landscape.url AS LandscapePath,
         poster.url AS PosterPath,
-        GROUP_CONCAT(DISTINCT countries.strCountry) AS Country,
-        GROUP_CONCAT(DISTINCT credits.strActor) AS Credits,
-        GROUP_CONCAT(DISTINCT directors.strActor) AS Director,
-        GROUP_CONCAT(DISTINCT genres.strGenre) AS Genre,
-        GROUP_CONCAT(DISTINCT studios.strStudio) AS Studio,
-        GROUP_CONCAT(DISTINCT tags.strTag) AS 'Tag'
+        countries.strCountry AS Country,
+        credits.strActor AS Credits,
+        directors.strActor AS Director,
+        genres.strGenre AS Genre,
+        studios.strStudio AS Studio,
+        tags.strTag AS 'Tag'
         FROM
         movie
         LEFT OUTER JOIN moviesource AS source ON (source.idSource = movie.idSource)
@@ -772,10 +782,12 @@ CREATE VIEW movielist
         LEFT OUTER JOIN genre AS genres ON (genres.idGenre = genrelink.idGenre)
         LEFT OUTER JOIN studiolinkmovie AS studiolink ON (studiolink.idMovie = movie.idMovie)
         LEFT OUTER JOIN studio AS studios ON (studios.idStudio = studiolink.idStudio)
-        LEFT OUTER JOIN taglinks AS taglink ON (taglink.idMedia = movie.idMovie)
-        AND (taglink.media_type = 'movie')
-        LEFT OUTER JOIN tag AS tags ON (tags.idTag = taglink.idTag)
-        GROUP BY movie.idMovie;
+        LEFT OUTER JOIN taglinks AS taglinks ON (taglinks.idMedia = movie.idMovie and taglinks.media_type='movie')
+        LEFT OUTER JOIN tag AS tags ON (tags.idTag = taglinks.idTag)
+        ORDER BY movie.idMovie, taglinks.tag_order 
+) AS ordered_movies		
+GROUP BY ordered_movies.idMovie;
+
 
 CREATE VIEW setslist
         AS
@@ -850,9 +862,25 @@ CREATE VIEW seasonslist
         GROUP BY
         seasons.idSeason;
 
+
 CREATE VIEW tvshowlist
-        AS
-        SELECT
+AS
+SELECT ordered_tvshows.*,
+	GROUP_CONCAT(DISTINCT Country) AS Country,
+	GROUP_CONCAT(DISTINCT Creator) AS Creator,
+	GROUP_CONCAT(DISTINCT Director) AS Director,
+	GROUP_CONCAT(DISTINCT Genre) AS Genre,
+	GROUP_CONCAT(DISTINCT Studio) AS Studio,
+	GROUP_CONCAT(DISTINCT Tag) AS Tag,
+	COUNT(DISTINCT Episodes) AS Episodes,
+	COUNT(DISTINCT CASE WHEN Playcount IS NOT NULL THEN Episodes ELSE NULL END) AS Playcount,
+	CASE WHEN COUNT(DISTINCT Episodes) IS NOT 0 AND COUNT(DISTINCT Episodes) = COUNT(DISTINCT CASE WHEN Playcount IS NOT NULL THEN Episodes ELSE NULL END) THEN 1 ELSE 0 END AS HasWatched,
+	COUNT(DISTINCT CASE WHEN NewEpisodes IS 1 THEN Episodes ELSE NULL END) AS NewEpisodes,
+	COUNT(DISTINCT CASE WHEN MarkedEpisodes IS 1 THEN Episodes ELSE NULL END) AS MarkedEpisodes,
+	COUNT(DISTINCT CASE WHEN LockedEpisodes IS 1 THEN Episodes ELSE NULL END) AS LockedEpisodes
+	
+FROM (
+	SELECT
         tvshow.*,
         CASE WHEN tvshow.SortTitle IS NOT '' THEN tvshow.SortTitle ELSE tvshow.ListTitle END AS SortedTitle,
         source.strName AS Source,
@@ -863,18 +891,17 @@ CREATE VIEW tvshowlist
         fanart.url AS FanartPath,
         landscape.url AS LandscapePath,
         poster.url AS PosterPath,
-        GROUP_CONCAT(DISTINCT countries.strCountry) AS Country,
-        GROUP_CONCAT(DISTINCT creators.strActor) AS Creator,
-        GROUP_CONCAT(DISTINCT directors.strActor) AS Director,
-        GROUP_CONCAT(DISTINCT genres.strGenre) AS Genre,
-        GROUP_CONCAT(DISTINCT studios.strStudio) AS Studio,
-        GROUP_CONCAT(DISTINCT tags.strTag) AS Tag,
-        COUNT(DISTINCT episodelist.idEpisode) AS Episodes,
-        COUNT(DISTINCT CASE WHEN episodelist.Playcount IS NOT NULL THEN episodelist.idEpisode ELSE NULL END) AS Playcount,
-        CASE WHEN COUNT(DISTINCT episodelist.idEpisode) IS NOT 0 AND COUNT(DISTINCT episodelist.idEpisode) = COUNT(DISTINCT CASE WHEN episodelist.Playcount IS NOT NULL THEN episodelist.idEpisode ELSE NULL END) THEN 1 ELSE 0 END AS HasWatched,
-        COUNT(DISTINCT CASE WHEN episodelist.New IS 1 THEN episodelist.idEpisode ELSE NULL END) AS NewEpisodes,
-        COUNT(DISTINCT CASE WHEN episodelist.Mark IS 1 THEN episodelist.idEpisode ELSE NULL END) AS MarkedEpisodes,
-        COUNT(DISTINCT CASE WHEN episodelist.Lock IS 1 THEN episodelist.idEpisode ELSE NULL END) AS LockedEpisodes
+        countries.strCountry AS Country,
+        creators.strActor AS Creator,
+        directors.strActor AS Director,
+        genres.strGenre AS Genre,
+        studios.strStudio AS Studio,
+        tags.strTag AS Tag,
+        episodelist.idEpisode AS Episodes,
+        episodelist.Playcount AS Playcount,
+        episodelist.New AS NewEpisodes,
+        episodelist.Mark AS MarkedEpisodes,
+        episodelist.Lock AS LockedEpisodes
         FROM
         tvshow
         LEFT OUTER JOIN tvshowsource AS source ON (source.idSource = tvshow.idSource)
@@ -909,10 +936,9 @@ CREATE VIEW tvshowlist
         LEFT OUTER JOIN genre AS genres ON (genres.idGenre = genrelink.idGenre)
         LEFT OUTER JOIN studiolinktvshow AS studiolink ON (studiolink.idShow = tvshow.idShow)
         LEFT OUTER JOIN studio AS studios ON (studios.idStudio = studiolink.idStudio)
-        LEFT OUTER JOIN taglinks AS taglink ON (taglink.idMedia = tvshow.idShow)
-        AND (taglink.media_type = 'tvshow')
-        LEFT OUTER JOIN tag AS tags ON (tags.idTag = taglink.idTag)
-        LEFT OUTER JOIN episodelist ON (tvshow.idShow = episodelist.idShow)
-        AND (episodelist.Missing = 0)
-        GROUP BY
-        tvshow.idShow;
+        LEFT OUTER JOIN taglinks ON (taglinks.idMedia = tvshow.idShow) AND (taglinks.media_type = 'tvshow')
+        LEFT OUTER JOIN tag AS tags ON (tags.idTag = taglinks.idTag)
+        LEFT OUTER JOIN episodelist ON (tvshow.idShow = episodelist.idShow) AND (episodelist.Missing = 0)
+        ORDER BY tvshow.idShow, taglinks.tag_order
+) AS ordered_tvshows
+GROUP BY ordered_tvshows.idShow;

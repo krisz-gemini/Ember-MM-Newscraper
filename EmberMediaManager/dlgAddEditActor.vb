@@ -34,6 +34,8 @@ Public Class dlgAddEditActor
     Private isNew As Boolean = True
     Private sHTTP As New HTTP
 
+    Private colActors As System.Windows.Forms.AutoCompleteStringCollection
+
 #End Region 'Fields
 
 #Region "Properties"
@@ -60,7 +62,25 @@ Public Class dlgAddEditActor
         lblName.Text = Master.eLang.GetString(154, "Actor Name:")
         lblRole.Text = Master.eLang.GetString(155, "Actor Role:")
         lblThumb.Text = Master.eLang.GetString(156, "Actor Thumb (URL):")
+
+        Dim a = New AutoCompleteBehavior(Of MediaContainers.Person)(cbName, AddressOf Me.LoadActors, "Name", "ID")
+
     End Sub
+
+    Private Function LoadActors(find As String) As List(Of MediaContainers.Person)
+        If find.Length < 1 Then
+            Return Nothing
+        End If
+
+        Return Master.DB.FindActors(find)
+    End Function
+
+    Private Function CreatePerson(id As Integer, name As String) As MediaContainers.Person
+        Dim p = New MediaContainers.Person
+        p.ID = id
+        p.Name = name
+        Return p
+    End Function
 
     Public Overloads Function ShowDialog(Optional ByVal inActor As MediaContainers.Person = Nothing) As DialogResult
         isNew = inActor Is Nothing
@@ -123,7 +143,7 @@ Public Class dlgAddEditActor
             Text = Master.eLang.GetString(157, "New Actor")
         Else
             Text = Master.eLang.GetString(158, "Edit Actor")
-            txtName.Text = tmpActor.Name
+            cbName.Text = tmpActor.Name
             txtRole.Text = tmpActor.Role
             txtThumb.Text = tmpActor.URLOriginal
         End If
@@ -132,13 +152,25 @@ Public Class dlgAddEditActor
     End Sub
 
     Private Sub btnOK_Click(ByVal sender As Object, ByVal e As EventArgs) Handles btnOK.Click
-        tmpActor.Name = txtName.Text
+        tmpActor.Name = cbName.Text
         tmpActor.Role = txtRole.Text
         DialogResult = DialogResult.OK
     End Sub
 
-    Private Sub txtName_TextChanged(sender As Object, e As EventArgs) Handles txtName.TextChanged
-        btnOK.Enabled = Not String.IsNullOrEmpty(txtName.Text)
+    Private Sub cbName_SelectionChangeCommitted(sender As Object, e As EventArgs) Handles cbName.SelectionChangeCommitted
+        If cbName.SelectedItem IsNot Nothing Then
+            Dim p = DirectCast(cbName.SelectedItem, MediaContainers.Person)
+            Dim pLoaded = Master.DB.LoadActor(p.ID)
+            If pLoaded IsNot Nothing Then
+                p = pLoaded
+            End If
+            txtThumb.Text = p.URLOriginal
+            btnVerify_Click(Nothing, Nothing)
+        End If
+    End Sub
+
+    Private Sub cbName_TextChanged(sender As Object, e As EventArgs) Handles cbName.TextChanged
+        btnOK.Enabled = Not String.IsNullOrEmpty(cbName.Text)
     End Sub
 
 #End Region 'Methods

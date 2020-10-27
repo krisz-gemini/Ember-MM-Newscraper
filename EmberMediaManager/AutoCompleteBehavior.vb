@@ -1,5 +1,5 @@
 ﻿Imports NLog
-﻿Public Class AutoCompleteBehavior(Of T)
+Public Class AutoCompleteBehavior(Of T)
 
     Private ReadOnly comboBox As ComboBox
     Private ReadOnly itemProvider As Func(Of String, List(Of T))

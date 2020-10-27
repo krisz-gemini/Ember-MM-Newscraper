@@ -95,6 +95,10 @@ Public Class dlgAddEditActor
     End Function
 
     Private Sub btnVerify_Click(ByVal sender As Object, ByVal e As EventArgs) Handles btnVerify.Click
+        Me.VerifyThumbnail()
+    End Sub
+
+    Private Sub VerifyThumbnail()
         If Not String.IsNullOrEmpty(txtThumb.Text) Then
             If StringUtils.isValidURL(txtThumb.Text) Then
                 If bwDownloadPic.IsBusy Then
@@ -164,8 +168,13 @@ Public Class dlgAddEditActor
             If pLoaded IsNot Nothing Then
                 p = pLoaded
             End If
-            txtThumb.Text = p.URLOriginal
-            btnVerify_Click(Nothing, Nothing)
+
+            If Not String.IsNullOrEmpty(p.URLOriginal) Then
+                txtThumb.Text = p.URLOriginal
+                Me.VerifyThumbnail()
+            Else
+                txtThumb.Text = ""
+            End If
         End If
     End Sub
 

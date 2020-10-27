@@ -1,6 +1,5 @@
 ﻿Imports NLog
-
-Public Class AutoCompleteBehavior(Of T)
+﻿Public Class AutoCompleteBehavior(Of T)
 
     Private ReadOnly comboBox As ComboBox
     Private ReadOnly itemProvider As Func(Of String, List(Of T))
@@ -11,7 +10,6 @@ Public Class AutoCompleteBehavior(Of T)
     Private skipKeyPress As Boolean
     Private logger As Logger = LogManager.GetCurrentClassLogger()
     Private listDroppedOnPreviewKeyDown As Boolean = False
-
 
     Public Sub New(comboBox As ComboBox, itemProvider As Func(Of String, List(Of T)), displayMember As String, valueMember As String)
 

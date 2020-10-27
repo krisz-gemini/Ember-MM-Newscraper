@@ -202,7 +202,6 @@ Partial Class dlgAddEditActor
         '
         'dlgAddEditActor
         '
-        Me.AcceptButton = Me.btnOK
         Me.AutoScaleDimensions = New System.Drawing.SizeF(96.0!, 96.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi
         Me.CancelButton = Me.btnCancel

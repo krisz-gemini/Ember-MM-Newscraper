@@ -558,7 +558,7 @@ Public Class dlgEditMovie
     Private Sub btnSetBannerLocal_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnSetBannerLocal.Click
         With ofdLocalFiles
             .InitialDirectory = Directory.GetParent(tmpDBElement.Filename).FullName
-            .Filter = Master.eLang.GetString(497, "Images") + "|*.jpg;*.png"
+            .Filter = Master.eLang.GetString(497, "Images") + "|*.jpg;*.jpeg;*.png"
             .FilterIndex = 0
         End With
 
@@ -873,7 +873,7 @@ Public Class dlgEditMovie
     Private Sub btnSetFanartLocal_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnSetFanartLocal.Click
         With ofdLocalFiles
             .InitialDirectory = Directory.GetParent(tmpDBElement.Filename).FullName
-            .Filter = Master.eLang.GetString(497, "Images") + "|*.jpg;*.png"
+            .Filter = Master.eLang.GetString(497, "Images") + "|*.jpg;*.jpeg;*.png"
             .FilterIndex = 4
         End With
 
@@ -936,7 +936,7 @@ Public Class dlgEditMovie
     Private Sub btnSetLandscapeLocal_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnSetLandscapeLocal.Click
         With ofdLocalFiles
             .InitialDirectory = Directory.GetParent(tmpDBElement.Filename).FullName
-            .Filter = Master.eLang.GetString(497, "Images") + "|*.jpg;*.png"
+            .Filter = Master.eLang.GetString(497, "Images") + "|*.jpg;*.jpeg;*.png"
             .FilterIndex = 0
         End With
 
@@ -999,7 +999,7 @@ Public Class dlgEditMovie
     Private Sub btnSetPosterLocal_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnSetPosterLocal.Click
         With ofdLocalFiles
             .InitialDirectory = Directory.GetParent(tmpDBElement.Filename).FullName
-            .Filter = Master.eLang.GetString(497, "Images") + "|*.jpg;*.png"
+            .Filter = Master.eLang.GetString(497, "Images") + "|*.jpg;*.jpeg;*.png"
             .FilterIndex = 0
         End With
 

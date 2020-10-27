@@ -367,9 +367,21 @@ Public Class Database
         Return ID
     End Function
 
-    Private Sub AddTagToItem(ByVal idMedia As Long, ByVal idTag As Long, ByVal type As String)
-        If String.IsNullOrEmpty(type) Then Return
-        AddToLinkTable("taglinks", "idTag", idTag, "idMedia", idMedia, "media_type", type)
+    Private Sub SaveTagsToItem(ByVal idMedia As Long, ByVal type As String, tags As List(Of String))
+        Using SQLcommand_taglinks As SQLiteCommand = _myvideosDBConn.CreateCommand()
+            SQLcommand_taglinks.CommandText = String.Format("DELETE FROM taglinks WHERE idMedia = {0} AND media_type = '{1}';", idMedia, type)
+            SQLcommand_taglinks.ExecuteNonQuery()
+        End Using
+
+        Dim order = 1.0
+        For Each tag As String In tags
+            Using SQLcommand_insert As SQLiteCommand = _myvideosDBConn.CreateCommand()
+                SQLcommand_insert.CommandText = String.Format("INSERT INTO taglinks (idTag, idMedia, media_type, tag_order) VALUES ({0}, {1}, '{2}', {3})", AddTag(tag), idMedia, type, order)
+                SQLcommand_insert.ExecuteNonQuery()
+            End Using
+            order = order + 1
+        Next
+
     End Sub
 
     Private Sub AddWriterToEpisode(ByVal idEpisode As Long, ByVal idWriter As Long)
@@ -814,7 +826,7 @@ Public Class Database
     Public Function Connect_MyVideos() As Boolean
 
         'set database version
-        Dim MyVideosDBVersion As Integer = 46
+        Dim MyVideosDBVersion As Integer = 48
 
         'set database filename
         Dim MyVideosDB As String = String.Format("MyVideos{0}.emm", MyVideosDBVersion)
@@ -1483,6 +1495,7 @@ Public Class Database
                     msource.GetYear = Convert.ToBoolean(SQLreader("bGetYear"))
                     msource.Language = SQLreader("strLanguage").ToString
                     msource.LastScan = SQLreader("strLastScan").ToString
+                    msource.FollowReparsePoints = Convert.ToBoolean(SQLreader("bFollowReparsePoints"))
                     lstSources.Add(msource)
                 End While
             End Using
@@ -1976,7 +1989,7 @@ Public Class Database
         'Tags
         Using SQLcommand As SQLiteCommand = _myvideosDBConn.CreateCommand()
             SQLcommand.CommandText = String.Concat("SELECT B.strTag FROM taglinks ",
-                                                   "AS A INNER JOIN tag AS B ON (A.idTag = B.idTag) WHERE A.idMedia = ", _movieDB.ID, " AND A.media_type = 'movie';")
+                                                   "AS A INNER JOIN tag AS B ON (A.idTag = B.idTag) WHERE A.idMedia = ", _movieDB.ID, " AND A.media_type = 'movie' ORDER BY A.tag_order ;")
             Using SQLreader As SQLiteDataReader = SQLcommand.ExecuteReader()
                 While SQLreader.Read
                     If Not DBNull.Value.Equals(SQLreader("strTag")) Then _movieDB.Movie.Tags.Add(SQLreader("strTag").ToString)
@@ -2119,6 +2132,7 @@ Public Class Database
                     _source.GetYear = Convert.ToBoolean(SQLreader("bGetYear"))
                     _source.Language = SQLreader("strLanguage").ToString
                     _source.LastScan = SQLreader("strLastScan").ToString
+                    _source.FollowReparsePoints = Convert.ToBoolean(SQLreader("bFollowReparsePoints"))
                 End If
             End Using
         End Using
@@ -2763,7 +2777,7 @@ Public Class Database
         'Tags
         Using SQLcommand As SQLiteCommand = _myvideosDBConn.CreateCommand()
             SQLcommand.CommandText = String.Concat("SELECT B.strTag FROM taglinks ",
-                                                   "AS A INNER JOIN tag AS B ON (A.idTag = B.idTag) WHERE A.idMedia = ", _TVDB.ID, " And A.media_type = 'tvshow';")
+                                                   "AS A INNER JOIN tag AS B ON (A.idTag = B.idTag) WHERE A.idMedia = ", _TVDB.ID, " And A.media_type = 'tvshow' ORDER BY A.tag_order;")
             Using SQLreader As SQLiteDataReader = SQLcommand.ExecuteReader()
                 Dim tag As String
                 While SQLreader.Read
@@ -3975,13 +3989,7 @@ Public Class Database
                 Next
 
                 'Tags
-                Using SQLcommand_taglinks As SQLiteCommand = _myvideosDBConn.CreateCommand()
-                    SQLcommand_taglinks.CommandText = String.Format("DELETE FROM taglinks WHERE idMedia = {0} AND media_type = 'movie';", _movieDB.ID)
-                    SQLcommand_taglinks.ExecuteNonQuery()
-                End Using
-                For Each tag As String In _movieDB.Movie.Tags
-                    AddTagToItem(_movieDB.ID, AddTag(tag), "movie")
-                Next
+                SaveTagsToItem(_movieDB.ID, "movie", _movieDB.Movie.Tags)
 
                 'Writers
                 Using SQLcommand_writerlink As SQLiteCommand = _myvideosDBConn.CreateCommand()
@@ -5248,13 +5256,7 @@ Public Class Database
                 Next
 
                 'Tags
-                Using SQLcommand_taglinks As SQLiteCommand = _myvideosDBConn.CreateCommand()
-                    SQLcommand_taglinks.CommandText = String.Format("DELETE FROM taglinks WHERE idMedia = {0} AND media_type = 'tvshow';", _show.ID)
-                    SQLcommand_taglinks.ExecuteNonQuery()
-                End Using
-                For Each tag As String In _show.TVShow.Tags
-                    AddTagToItem(_show.ID, AddTag(tag), "tvshow")
-                Next
+                SaveTagsToItem(_show.ID, "tvshow", _show.TVShow.Tags)
 
             End If
         End Using
@@ -6232,6 +6234,7 @@ Public Class Database
         Private _path As String
         Private _recursive As Boolean
         Private _usefoldername As Boolean
+        Private _followreparsepoints As Boolean
 
 #End Region 'Fields
 
@@ -6383,6 +6386,15 @@ Public Class Database
             End Set
         End Property
 
+        Public Property FollowReparsePoints() As Boolean
+            Get
+                Return _followreparsepoints
+            End Get
+            Set(ByVal value As Boolean)
+                _followreparsepoints = value
+            End Set
+        End Property
+
 #End Region 'Properties
 
 #Region "Methods"
@@ -6400,6 +6412,7 @@ Public Class Database
             _path = String.Empty
             _recursive = False
             _usefoldername = False
+            _followreparsepoints = False
         End Sub
 
 #End Region 'Methods

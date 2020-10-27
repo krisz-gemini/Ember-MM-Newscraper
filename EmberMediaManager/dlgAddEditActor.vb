@@ -168,6 +168,7 @@ Public Class dlgAddEditActor
             If pLoaded IsNot Nothing Then
                 p = pLoaded
             End If
+
             If Not String.IsNullOrEmpty(p.URLOriginal) Then
                 txtThumb.Text = p.URLOriginal
                 Me.VerifyThumbnail()

@@ -1633,6 +1633,7 @@ Partial Class dlgSettings
         Me.scSettingsBody = New System.Windows.Forms.SplitContainer()
         Me.scSettingsMain = New System.Windows.Forms.SplitContainer()
         Me.tblSettingsFooter = New System.Windows.Forms.TableLayoutPanel()
+        Me.colMovieSourcesFollowReparsePoints = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.gbGeneralMiscOpts.SuspendLayout()
         Me.tblGeneralMisc.SuspendLayout()
         Me.gbGeneralThemes.SuspendLayout()
@@ -4230,7 +4231,7 @@ Partial Class dlgSettings
         '
         'lvMovieSources
         '
-        Me.lvMovieSources.Columns.AddRange(New System.Windows.Forms.ColumnHeader() {Me.colMovieSourcesID, Me.colMovieSourcesName, Me.colMovieSourcesPath, Me.colMovieSourcesLanguage, Me.colMovieSourcesRecur, Me.colMovieSourcesFolder, Me.colMovieSourcesSingle, Me.colMovieSourcesExclude, Me.colMovieSourcesGetYear})
+        Me.lvMovieSources.Columns.AddRange(New System.Windows.Forms.ColumnHeader() {Me.colMovieSourcesID, Me.colMovieSourcesName, Me.colMovieSourcesPath, Me.colMovieSourcesLanguage, Me.colMovieSourcesRecur, Me.colMovieSourcesFolder, Me.colMovieSourcesSingle, Me.colMovieSourcesExclude, Me.colMovieSourcesGetYear, Me.colMovieSourcesFollowReparsePoints})
         Me.tblMovieSources.SetColumnSpan(Me.lvMovieSources, 2)
         Me.lvMovieSources.Dock = System.Windows.Forms.DockStyle.Fill
         Me.lvMovieSources.Font = New System.Drawing.Font("Segoe UI", 8.25!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(238, Byte))
@@ -22863,6 +22864,11 @@ Partial Class dlgSettings
         Me.tblSettingsFooter.Size = New System.Drawing.Size(1207, 74)
         Me.tblSettingsFooter.TabIndex = 0
         '
+        'colMovieSourcesFollowReparsePoints
+        '
+        Me.colMovieSourcesFollowReparsePoints.Text = "Follow Junctions"
+
+        '
         'dlgSettings
         '
         Me.AcceptButton = Me.btnOK
@@ -25286,4 +25292,5 @@ End Sub
     Friend WithEvents colMovieGeneralMediaListSortingHide As ColumnHeader
     Friend WithEvents btnMovieGeneralMediaListSortingReset As Button
     Friend WithEvents btnFileSystemExcludedDirsBrowse As Button
+    Friend WithEvents colMovieSourcesFollowReparsePoints As ColumnHeader
 End Class

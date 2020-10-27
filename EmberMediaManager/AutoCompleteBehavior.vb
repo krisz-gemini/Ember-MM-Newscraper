@@ -1,4 +1,6 @@
-﻿Public Class AutoCompleteBehavior(Of T)
+﻿Imports NLog
+
+Public Class AutoCompleteBehavior(Of T)
 
     Private ReadOnly comboBox As ComboBox
     Private ReadOnly itemProvider As Func(Of String, List(Of T))
@@ -6,6 +8,10 @@
     Private ReadOnly valueMember As String
 
     Private lastText As String
+    Private skipKeyPress As Boolean
+    Private logger As Logger = LogManager.GetCurrentClassLogger()
+    Private listDroppedOnPreviewKeyDown As Boolean = False
+
 
     Public Sub New(comboBox As ComboBox, itemProvider As Func(Of String, List(Of T)), displayMember As String, valueMember As String)
 
@@ -21,6 +27,8 @@
         AddHandler Me.comboBox.KeyPress, New KeyPressEventHandler(AddressOf Me.OnKeyPress)
         AddHandler Me.comboBox.Leave, New EventHandler(AddressOf Me.OnLeave)
         AddHandler Me.comboBox.SelectionChangeCommitted, New EventHandler(AddressOf Me.OnSelectionChangeCommitted)
+        AddHandler Me.comboBox.KeyDown, New KeyEventHandler(AddressOf Me.OnKeyDown)
+        AddHandler Me.comboBox.PreviewKeyDown, New PreviewKeyDownEventHandler(AddressOf Me.OnPreviewKeyDown)
     End Sub
 
     Private Sub OnLeave(sender As Object, e As EventArgs)
@@ -55,16 +63,45 @@
         End If
     End Sub
 
+    Private Sub OnPreviewKeyDown(sender As Object, e As PreviewKeyDownEventArgs)
+        logger.Trace("cbName_PreviewKeyDown: " + CStr(e.KeyCode) + ", list: " + CStr(Me.comboBox.DroppedDown))
+        If e.KeyCode = Keys.Enter Then
+            If Me.comboBox.DroppedDown Then
+                'Workaround: OnPreviewKeyDown called twice, and DroppedDown is False on the second call
+                'so we store the original value for the OnKeyDown method and for our second call (ElseIf branch)
+                Me.listDroppedOnPreviewKeyDown = True
+                e.IsInputKey = True
+            ElseIf Me.listDroppedOnPreviewKeyDown Then
+                e.IsInputKey = True
+            End If
+        End If
+    End Sub
 
     Private Sub OnKeyDown(sender As Object, e As KeyEventArgs)
-        If (e.KeyCode = Keys.Enter) Then
+        logger.Trace("OnKeyDown: " + CStr(e.KeyCode) + ", list: " + CStr(Me.listDroppedOnPreviewKeyDown))
+        If e.KeyCode = Keys.Enter AndAlso Me.listDroppedOnPreviewKeyDown Then
+            logger.Trace("OnKeyDown: ENTER HANDLED")
+            Me.listDroppedOnPreviewKeyDown = False
             e.Handled = True
             Return
         End If
-
+        If e.KeyCode = Keys.Delete Then
+            comboBox.BeginInvoke(New Action(AddressOf Me.ReevaluateCompletionList))
+        End If
+        If e.KeyCode = Keys.C AndAlso e.Modifiers = Keys.Control Then
+            'Avoid drop down the list on Copy operation
+            Me.skipKeyPress = True
+            Return
+        End If
     End Sub
 
     Private Sub OnKeyPress(sender As Object, e As KeyPressEventArgs)
+        logger.Trace("OnKeyPress: " + e.KeyChar)
+        If Me.skipKeyPress Then
+            Me.skipKeyPress = False
+            Return
+        End If
+
         'Its crucial that we use begininvoke because we need the changes to sink into the textfield  
         'Omitting begininvoke would cause the searchterm to lag behind by one character
         'That Is the last character that got typed in
@@ -95,6 +132,9 @@
             comboBox.DataSource = items
             comboBox.DisplayMember = Me.displayMember
             comboBox.ValueMember = Me.valueMember
+
+            'FIXME: is it necessary?
+            'comboBox.SelectedIndex = -1
 
             If (currentSearchterm.Length >= 1 AndAlso comboBox.Items.Count > 0 AndAlso Not comboBox.DroppedDown) Then
                 'If the current searchterm Is empty we leave the dropdown list To whatever state it already had

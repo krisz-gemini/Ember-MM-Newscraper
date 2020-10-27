@@ -1,4 +1,4 @@
-﻿Imports NLog
+Imports NLog
 Public Class AutoCompleteBehavior(Of T)
 
     Private ReadOnly comboBox As ComboBox

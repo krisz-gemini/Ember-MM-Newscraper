@@ -1428,25 +1428,41 @@ Public Class Scanner
     ''' <param name="sSource"></param>
     ''' <param name="strPath">Specific Path to scan</param>
     Public Sub ScanSourceDirectory_Movie(ByVal sSource As Database.DBSource, ByVal doScan As Boolean, Optional ByVal strPath As String = "")
-        Dim strScanPath As String = String.Empty
-
+        Dim strScanPath As String
         If Not String.IsNullOrEmpty(strPath) Then
             strScanPath = strPath
         Else
             strScanPath = sSource.Path
         End If
 
-        If Directory.Exists(strScanPath) Then
-            Dim strMoviePath As String = String.Empty
+        Dim directories As New HashSet(Of String)
+        Dim reparsePoints As New Dictionary(Of String, String)
 
-            Dim dInfo As New DirectoryInfo(strScanPath)
+        ScanSourceDirectory_Movie0(sSource, strScanPath, directories, reparsePoints)
+
+        While reparsePoints.Count > 0
+            Dim kv = reparsePoints.First
+            If Not directories.Contains(kv.Value) Then
+                directories.Add(kv.Value)
+                ScanSourceDirectory_Movie0(sSource, kv.Value, directories, reparsePoints)
+            End If
+            reparsePoints.Remove(kv.Key)
+        End While
+
+        'check if there are any movies in this directory
+        If doScan AndAlso Not directories.Contains(strScanPath) Then
+            ScanForFiles_Movie(strScanPath, sSource)
+        End If
+    End Sub
+
+    Private Sub ScanSourceDirectory_Movie0(ByVal sSource As Database.DBSource, ByVal strPath As String, ByRef directories As HashSet(Of String), ByRef reparsePoints As Dictionary(Of String, String))
+        If Directory.Exists(strPath) Then
+
+            Dim dInfo As New DirectoryInfo(strPath)
+
             Dim dList As IEnumerable(Of DirectoryInfo) = Nothing
 
             Try
-
-                'check if there are any movies in this directory
-                If doScan Then ScanForFiles_Movie(strScanPath, sSource)
-
                 If Master.eSettings.MovieScanOrderModify Then
                     Try
                         dList = dInfo.GetDirectories.Where(Function(s) (Master.eSettings.MovieGeneralIgnoreLastScan OrElse sSource.Recursive OrElse s.LastWriteTime > SourceLastScan) AndAlso IsValidDir(s, False)).OrderBy(Function(d) d.LastWriteTime)
@@ -1461,11 +1477,18 @@ Public Class Scanner
                     End Try
                 End If
 
+
                 For Each inDir As DirectoryInfo In dList
                     If bwPrelim.CancellationPending Then Return
-                    ScanForFiles_Movie(inDir.FullName, sSource)
-                    If sSource.Recursive Then
-                        ScanSourceDirectory_Movie(sSource, False, inDir.FullName)
+                    Dim target = FileUtils.Common.ResolveReparsePoints(inDir.FullName)
+                    If target IsNot Nothing Then
+                        reparsePoints.Add(inDir.FullName, target)
+                    Else
+                        directories.Add(inDir.FullName)
+                        ScanForFiles_Movie(inDir.FullName, sSource)
+                        If sSource.Recursive Then
+                            ScanSourceDirectory_Movie0(sSource, inDir.FullName, directories, reparsePoints)
+                        End If
                     End If
                 Next
 

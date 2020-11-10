@@ -574,14 +574,9 @@ Public Class Scanner
     ''' Check if we should scan the directory.
     ''' </summary>
     ''' <param name="dInfo">Full path of the directory to check</param>
-    ''' <param name="sSource"></param>
     ''' <returns>True if directory is valid, false if not.</returns>
-    Public Function IsValidDir(ByVal dInfo As DirectoryInfo, ByVal bIsTV As Boolean, ByVal sSource As Database.DBSource) As Boolean
+    Public Function IsValidDir(ByVal dInfo As DirectoryInfo, ByVal bIsTV As Boolean) As Boolean
         Try
-            If (Not sSource.FollowReparsePoints AndAlso (dInfo.Attributes And FileAttributes.ReparsePoint) > 0) Then
-                Return False
-            End If
-
             For Each s As String In Master.DB.GetExcludedDirs
                 If dInfo.FullName.ToLower = s.ToLower Then
                     logger.Info(String.Format("[Sanner] [IsValidDir] [ExcludeDirs] Path ""{0}"" has been skipped (path is in ""exclude directory"" list)", dInfo.FullName, s))
@@ -1445,7 +1440,6 @@ Public Class Scanner
             Dim strMoviePath As String = String.Empty
 
             Dim dInfo As New DirectoryInfo(strScanPath)
-
             Dim dList As IEnumerable(Of DirectoryInfo) = Nothing
 
             Try
@@ -1455,13 +1449,13 @@ Public Class Scanner
 
                 If Master.eSettings.MovieScanOrderModify Then
                     Try
-                        dList = dInfo.GetDirectories.Where(Function(s) (Master.eSettings.MovieGeneralIgnoreLastScan OrElse sSource.Recursive OrElse s.LastWriteTime > SourceLastScan) AndAlso IsValidDir(s, False, sSource)).OrderBy(Function(d) d.LastWriteTime)
+                        dList = dInfo.GetDirectories.Where(Function(s) (Master.eSettings.MovieGeneralIgnoreLastScan OrElse sSource.Recursive OrElse s.LastWriteTime > SourceLastScan) AndAlso IsValidDir(s, False)).OrderBy(Function(d) d.LastWriteTime)
                     Catch ex As Exception
                         logger.Error(ex, New StackFrame().GetMethod().Name)
                     End Try
                 Else
                     Try
-                        dList = dInfo.GetDirectories.Where(Function(s) (Master.eSettings.MovieGeneralIgnoreLastScan OrElse sSource.Recursive OrElse s.LastWriteTime > SourceLastScan) AndAlso IsValidDir(s, False, sSource)).OrderBy(Function(d) d.Name)
+                        dList = dInfo.GetDirectories.Where(Function(s) (Master.eSettings.MovieGeneralIgnoreLastScan OrElse sSource.Recursive OrElse s.LastWriteTime > SourceLastScan) AndAlso IsValidDir(s, False)).OrderBy(Function(d) d.Name)
                     Catch ex As Exception
                         logger.Error(ex, New StackFrame().GetMethod().Name)
                     End Try
@@ -1514,13 +1508,13 @@ Public Class Scanner
 
                 If Master.eSettings.TVScanOrderModify Then
                     Try
-                        inList = dInfo.GetDirectories.Where(Function(d) (Master.eSettings.TVGeneralIgnoreLastScan OrElse d.LastWriteTime > SourceLastScan) AndAlso IsValidDir(d, True, sSource)).OrderBy(Function(d) d.LastWriteTime)
+                        inList = dInfo.GetDirectories.Where(Function(d) (Master.eSettings.TVGeneralIgnoreLastScan OrElse d.LastWriteTime > SourceLastScan) AndAlso IsValidDir(d, True)).OrderBy(Function(d) d.LastWriteTime)
                     Catch ex As Exception
                         logger.Error(ex, New StackFrame().GetMethod().Name)
                     End Try
                 Else
                     Try
-                        inList = dInfo.GetDirectories.Where(Function(d) (Master.eSettings.TVGeneralIgnoreLastScan OrElse d.LastWriteTime > SourceLastScan) AndAlso IsValidDir(d, True, sSource)).OrderBy(Function(d) d.Name)
+                        inList = dInfo.GetDirectories.Where(Function(d) (Master.eSettings.TVGeneralIgnoreLastScan OrElse d.LastWriteTime > SourceLastScan) AndAlso IsValidDir(d, True)).OrderBy(Function(d) d.Name)
                     Catch ex As Exception
                         logger.Error(ex, New StackFrame().GetMethod().Name)
                     End Try
@@ -1528,7 +1522,7 @@ Public Class Scanner
 
                 For Each sDirs As DirectoryInfo In inList
                     ScanForFiles_TV(currShowContainer, sDirs.FullName)
-                    ScanSubDirectory_TV(currShowContainer, sDirs.FullName, sSource)
+                    ScanSubDirectory_TV(currShowContainer, sDirs.FullName)
                 Next
 
                 Dim Result = Load_TVShow(currShowContainer, True, True, True)
@@ -1536,7 +1530,7 @@ Public Class Scanner
                     bwPrelim.ReportProgress(-1, New ProgressValue With {.EventType = Result, .ID = currShowContainer.ID, .Message = currShowContainer.TVShow.Title})
                 End If
             Else
-                For Each inDir As DirectoryInfo In dInfo.GetDirectories.Where(Function(d) IsValidDir(d, True, sSource)).OrderBy(Function(d) d.Name)
+                For Each inDir As DirectoryInfo In dInfo.GetDirectories.Where(Function(d) IsValidDir(d, True)).OrderBy(Function(d) d.Name)
                     currShowContainer = New Database.DBElement(Enums.ContentType.TVShow)
                     currShowContainer.EpisodeSorting = sSource.EpisodeSorting
                     currShowContainer.Language = sSource.Language
@@ -1549,19 +1543,19 @@ Public Class Scanner
 
                     If Master.eSettings.TVScanOrderModify Then
                         Try
-                            inList = inInfo.GetDirectories.Where(Function(d) (Master.eSettings.TVGeneralIgnoreLastScan OrElse d.LastWriteTime > SourceLastScan) AndAlso IsValidDir(d, True, sSource)).OrderBy(Function(d) d.LastWriteTime)
+                            inList = inInfo.GetDirectories.Where(Function(d) (Master.eSettings.TVGeneralIgnoreLastScan OrElse d.LastWriteTime > SourceLastScan) AndAlso IsValidDir(d, True)).OrderBy(Function(d) d.LastWriteTime)
                         Catch
                         End Try
                     Else
                         Try
-                            inList = inInfo.GetDirectories.Where(Function(d) (Master.eSettings.TVGeneralIgnoreLastScan OrElse d.LastWriteTime > SourceLastScan) AndAlso IsValidDir(d, True, sSource)).OrderBy(Function(d) d.Name)
+                            inList = inInfo.GetDirectories.Where(Function(d) (Master.eSettings.TVGeneralIgnoreLastScan OrElse d.LastWriteTime > SourceLastScan) AndAlso IsValidDir(d, True)).OrderBy(Function(d) d.Name)
                         Catch
                         End Try
                     End If
 
                     For Each sDirs As DirectoryInfo In inList
                         ScanForFiles_TV(currShowContainer, sDirs.FullName)
-                        ScanSubDirectory_TV(currShowContainer, sDirs.FullName, sSource)
+                        ScanSubDirectory_TV(currShowContainer, sDirs.FullName)
                     Next
 
                     Dim Result = Load_TVShow(currShowContainer, True, True, True)
@@ -1592,16 +1586,16 @@ Public Class Scanner
         Return False
     End Function
 
-    Private Sub ScanSubDirectory_TV(ByRef tShow As Database.DBElement, ByVal strPath As String, ByVal sSource As Database.DBSource)
+    Private Sub ScanSubDirectory_TV(ByRef tShow As Database.DBElement, ByVal strPath As String)
         Dim inInfo As DirectoryInfo
         Dim inList As IEnumerable(Of DirectoryInfo) = Nothing
 
         inInfo = New DirectoryInfo(strPath)
-        inList = inInfo.GetDirectories.Where(Function(d) IsValidDir(d, True, sSource)).OrderBy(Function(d) d.Name)
+        inList = inInfo.GetDirectories.Where(Function(d) IsValidDir(d, True)).OrderBy(Function(d) d.Name)
 
         For Each sDirs As DirectoryInfo In inList
             ScanForFiles_TV(tShow, sDirs.FullName)
-            ScanSubDirectory_TV(tShow, sDirs.FullName, sSource)
+            ScanSubDirectory_TV(tShow, sDirs.FullName)
         Next
     End Sub
 
@@ -1617,24 +1611,24 @@ Public Class Scanner
     ''' </summary>
     ''' <param name="MovieDir">DirectoryInfo object of directory to scan.</param>
     ''' <returns>True if the path's subdirectories contain movie files, else false.</returns>
-    'Public Function SubDirsHaveMovies(ByVal MovieDir As DirectoryInfo) As Boolean
-    '    Try
-    '        If Directory.Exists(MovieDir.FullName) Then
+    Public Function SubDirsHaveMovies(ByVal MovieDir As DirectoryInfo) As Boolean
+        Try
+            If Directory.Exists(MovieDir.FullName) Then
 
-    '            For Each inDir As DirectoryInfo In MovieDir.GetDirectories
-    '                If IsValidDir(inDir, False, sSource) Then
-    '                    If ScanSubDirectory_Movie(inDir) Then Return True
-    '                    SubDirsHaveMovies(inDir)
-    '                End If
-    '            Next
+                For Each inDir As DirectoryInfo In MovieDir.GetDirectories
+                    If IsValidDir(inDir, False) Then
+                        If ScanSubDirectory_Movie(inDir) Then Return True
+                        SubDirsHaveMovies(inDir)
+                    End If
+                Next
 
-    '        End If
-    '        Return False
-    '    Catch ex As Exception
-    '        logger.Error(ex, New StackFrame().GetMethod().Name)
-    '        Return False
-    '    End Try
-    'End Function
+            End If
+            Return False
+        Catch ex As Exception
+            logger.Error(ex, New StackFrame().GetMethod().Name)
+            Return False
+        End Try
+    End Function
 
     Private Sub bwPrelim_DoWork(ByVal sender As Object, ByVal e As System.ComponentModel.DoWorkEventArgs) Handles bwPrelim.DoWork
         Dim Args As Arguments = DirectCast(e.Argument, Arguments)
@@ -1685,7 +1679,7 @@ Public Class Scanner
                             Dim inInfo As DirectoryInfo = New DirectoryInfo(currShowContainer.ShowPath)
                             Dim inList As IEnumerable(Of DirectoryInfo) = Nothing
                             Try
-                                inList = inInfo.GetDirectories.Where(Function(d) (Master.eSettings.TVGeneralIgnoreLastScan OrElse d.LastWriteTime > SourceLastScan) AndAlso IsValidDir(d, True, eSource)).OrderBy(Function(d) d.Name)
+                                inList = inInfo.GetDirectories.Where(Function(d) (Master.eSettings.TVGeneralIgnoreLastScan OrElse d.LastWriteTime > SourceLastScan) AndAlso IsValidDir(d, True)).OrderBy(Function(d) d.Name)
                             Catch
                             End Try
 

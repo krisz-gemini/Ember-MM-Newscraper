@@ -964,7 +964,6 @@ Public Class dlgWizard
             lvItem.SubItems.Add(If(s.IsSingle, Master.eLang.GetString(300, "Yes"), Master.eLang.GetString(720, "No")))
             lvItem.SubItems.Add(If(s.Exclude, Master.eLang.GetString(300, "Yes"), Master.eLang.GetString(720, "No")))
             lvItem.SubItems.Add(If(s.GetYear, Master.eLang.GetString(300, "Yes"), Master.eLang.GetString(720, "No")))
-            lvItem.SubItems.Add(If(s.FollowReparsePoints, Master.eLang.GetString(300, "Yes"), Master.eLang.GetString(720, "No")))
             lvMovies.Items.Add(lvItem)
             tmppath = s.Path
         Next
@@ -1468,7 +1467,6 @@ Public Class dlgWizard
         colSingle.Text = Master.eLang.GetString(413, "Single Video")
         colExclude.Text = Master.eLang.GetString(264, "Exclude")
         colGetYear.Text = Master.eLang.GetString(586, "Get Year")
-        colFollowReparsePoints.Text = Master.eLang.GetString(1493, "Follow Junctions")
         lvTVSources.Columns(1).Text = Master.eLang.GetString(232, "Name")
         lvTVSources.Columns(2).Text = Master.eLang.GetString(410, "Path")
         lvTVSources.Columns(3).Text = Master.eLang.GetString(610, "Language")

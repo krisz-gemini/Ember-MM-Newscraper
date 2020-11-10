@@ -826,7 +826,7 @@ Public Class Database
     Public Function Connect_MyVideos() As Boolean
 
         'set database version
-        Dim MyVideosDBVersion As Integer = 48
+        Dim MyVideosDBVersion As Integer = 47
 
         'set database filename
         Dim MyVideosDB As String = String.Format("MyVideos{0}.emm", MyVideosDBVersion)
@@ -1495,7 +1495,6 @@ Public Class Database
                     msource.GetYear = Convert.ToBoolean(SQLreader("bGetYear"))
                     msource.Language = SQLreader("strLanguage").ToString
                     msource.LastScan = SQLreader("strLastScan").ToString
-                    msource.FollowReparsePoints = Convert.ToBoolean(SQLreader("bFollowReparsePoints"))
                     lstSources.Add(msource)
                 End While
             End Using
@@ -2132,7 +2131,6 @@ Public Class Database
                     _source.GetYear = Convert.ToBoolean(SQLreader("bGetYear"))
                     _source.Language = SQLreader("strLanguage").ToString
                     _source.LastScan = SQLreader("strLastScan").ToString
-                    _source.FollowReparsePoints = Convert.ToBoolean(SQLreader("bFollowReparsePoints"))
                 End If
             End Using
         End Using
@@ -6234,7 +6232,6 @@ Public Class Database
         Private _path As String
         Private _recursive As Boolean
         Private _usefoldername As Boolean
-        Private _followreparsepoints As Boolean
 
 #End Region 'Fields
 
@@ -6386,15 +6383,6 @@ Public Class Database
             End Set
         End Property
 
-        Public Property FollowReparsePoints() As Boolean
-            Get
-                Return _followreparsepoints
-            End Get
-            Set(ByVal value As Boolean)
-                _followreparsepoints = value
-            End Set
-        End Property
-
 #End Region 'Properties
 
 #Region "Methods"
@@ -6412,7 +6400,6 @@ Public Class Database
             _path = String.Empty
             _recursive = False
             _usefoldername = False
-            _followreparsepoints = False
         End Sub
 
 #End Region 'Methods

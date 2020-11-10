@@ -4633,7 +4633,6 @@ Public Class dlgSettings
             lvItem.SubItems.Add(If(s.IsSingle, Master.eLang.GetString(300, "Yes"), Master.eLang.GetString(720, "No")))
             lvItem.SubItems.Add(If(s.Exclude, Master.eLang.GetString(300, "Yes"), Master.eLang.GetString(720, "No")))
             lvItem.SubItems.Add(If(s.GetYear, Master.eLang.GetString(300, "Yes"), Master.eLang.GetString(720, "No")))
-            lvItem.SubItems.Add(If(s.FollowReparsePoints, Master.eLang.GetString(300, "Yes"), Master.eLang.GetString(720, "No")))
             lvMovieSources.Items.Add(lvItem)
         Next
     End Sub
@@ -6815,9 +6814,6 @@ Public Class dlgSettings
         'Use Folder Name
         Dim strUseFolderName As String = Master.eLang.GetString(412, "Use Folder Name")
         colMovieSourcesFolder.Text = strUseFolderName
-
-        'Follow Reparse Points
-        colMovieSourcesFollowReparsePoints.Text = Master.eLang.GetString(1493, "Follow Junctions")
 
         'User Rating
         Dim strUserRating As String = Master.eLang.GetString(1467, "User Rating")

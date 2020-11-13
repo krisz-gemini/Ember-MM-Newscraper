@@ -705,7 +705,7 @@ Namespace FileUtils
         Public Shared Function ResolveReparsePoints(ByVal strPath As String) As String
             Dim Output As String = Nothing
 
-            If Run_Process("fsutil", String.Format("reparsepoint query ""{0}""", strPath), True, Output) Then
+            If Run_Process("fsutil", String.Format("reparsepoint query ""{0}""", strPath), True, Output, True) Then
                 Dim re = New Regex("Substitute Name:\s+\\\?\?\\([^\r\n]*)\r?\n?$", RegexOptions.Multiline)
 
                 Dim m As Match = re.Match(Output)
@@ -716,6 +716,25 @@ Namespace FileUtils
             End If
 
             Return Nothing
+        End Function
+
+        'FIXME: doc
+        Public Shared Function PathStartsWith(ByVal strPath As String, ByVal strPrefix As String) As Boolean
+            If String.IsNullOrEmpty(strPath) OrElse String.IsNullOrEmpty(strPrefix) Then
+                Return False
+            End If
+
+            strPath = strPath.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
+            If strPath.Chars(strPath.Length - 1) <> Path.DirectorySeparatorChar Then
+                strPath += Path.DirectorySeparatorChar
+            End If
+
+            strPrefix = strPrefix.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
+            If strPrefix.Chars(strPrefix.Length - 1) <> Path.DirectorySeparatorChar Then
+                strPrefix += Path.DirectorySeparatorChar
+            End If
+
+            Return strPath.StartsWith(strPrefix)
         End Function
 
 #End Region 'Methods

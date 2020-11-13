@@ -1435,27 +1435,17 @@ Public Class Scanner
             strScanPath = sSource.Path
         End If
 
-        Dim directories As New HashSet(Of String)
-        Dim reparsePoints As New Dictionary(Of String, String)
+        Dim processedDirectories As New HashSet(Of String)
 
-        ScanSourceDirectory_Movie0(sSource, strScanPath, directories, reparsePoints)
-
-        While reparsePoints.Count > 0
-            Dim kv = reparsePoints.First
-            If Not directories.Contains(kv.Value) Then
-                directories.Add(kv.Value)
-                ScanSourceDirectory_Movie0(sSource, kv.Value, directories, reparsePoints)
-            End If
-            reparsePoints.Remove(kv.Key)
-        End While
+        ScanSourceDirectory_Movie0(sSource, strScanPath, processedDirectories)
 
         'check if there are any movies in this directory
-        If doScan AndAlso Not directories.Contains(strScanPath) Then
+        If doScan AndAlso Not processedDirectories.Contains(strScanPath) Then
             ScanForFiles_Movie(strScanPath, sSource)
         End If
     End Sub
 
-    Private Sub ScanSourceDirectory_Movie0(ByVal sSource As Database.DBSource, ByVal strPath As String, ByRef directories As HashSet(Of String), ByRef reparsePoints As Dictionary(Of String, String))
+    Private Sub ScanSourceDirectory_Movie0(ByVal sSource As Database.DBSource, ByVal strPath As String, ByRef processedDirectories As HashSet(Of String))
         If Directory.Exists(strPath) Then
 
             Dim dInfo As New DirectoryInfo(strPath)
@@ -1480,15 +1470,29 @@ Public Class Scanner
 
                 For Each inDir As DirectoryInfo In dList
                     If bwPrelim.CancellationPending Then Return
+                    If processedDirectories.Contains(inDir.FullName) Then Continue For
+
+                    'resolve reparse points (junctions)
+                    Dim lastInnerDirectory = inDir.FullName
+                    Dim lastDirectory = inDir.FullName
                     Dim target = FileUtils.Common.ResolveReparsePoints(inDir.FullName)
-                    If target IsNot Nothing Then
-                        reparsePoints.Add(inDir.FullName, target)
-                    Else
-                        directories.Add(inDir.FullName)
-                        ScanForFiles_Movie(inDir.FullName, sSource)
-                        If sSource.Recursive Then
-                            ScanSourceDirectory_Movie0(sSource, inDir.FullName, directories, reparsePoints)
+                    While target IsNot Nothing
+                        processedDirectories.Add(lastDirectory)
+                        If processedDirectories.Contains(target) Then
+                            Continue For
                         End If
+                        lastDirectory = target
+                        If (FileUtils.Common.PathStartsWith(target, sSource.Path)) Then
+                            lastInnerDirectory = target
+                        End If
+                        target = FileUtils.Common.ResolveReparsePoints(target)
+                    End While
+                    processedDirectories.Add(lastDirectory)
+
+                    'we use the last directory found under the source path (eg: D:\Movies\MoviesOnOtherDrive -> E:\Movies)
+                    ScanForFiles_Movie(lastInnerDirectory, sSource)
+                    If sSource.Recursive Then
+                        ScanSourceDirectory_Movie0(sSource, lastInnerDirectory, processedDirectories)
                     End If
                 Next
 

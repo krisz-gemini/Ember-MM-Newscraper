@@ -182,6 +182,7 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="clsAPIProfiles.vb" />
+    <Compile Include="clsAPIProperties.vb" />
     <Compile Include="clsAPITaskManager.vb" />
     <Compile Include="clsAPIThemes.vb" />
     <Compile Include="clsAPICommon.vb" />

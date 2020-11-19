@@ -719,7 +719,7 @@ Namespace FileUtils
         End Function
 
         'FIXME: doc
-        Public Shared Function PathStartsWith(ByVal strPath As String, ByVal strPrefix As String) As Boolean
+        Public Shared Function IsAscendantOrTheSamePath(ByVal strPath As String, ByVal strPrefix As String) As Boolean
             If String.IsNullOrEmpty(strPath) OrElse String.IsNullOrEmpty(strPrefix) Then
                 Return False
             End If

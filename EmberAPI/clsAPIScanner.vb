@@ -1482,7 +1482,7 @@ Public Class Scanner
                             Continue For
                         End If
                         lastDirectory = target
-                        If (FileUtils.Common.PathStartsWith(target, sSource.Path)) Then
+                        If (FileUtils.Common.IsAscendantOrTheSamePath(target, sSource.Path)) Then
                             lastInnerDirectory = target
                         End If
                         target = FileUtils.Common.ResolveReparsePoints(target)

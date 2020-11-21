@@ -525,13 +525,11 @@ Public Class Trailers
 
                 'make sure directory exists
                 Directory.CreateDirectory(Directory.GetParent(sPath).FullName)
-                If sPath.Length <= 260 Then
-                    Using fs As New FileStream(sPath, FileMode.Create, FileAccess.Write)
-                        fs.Write(retSave, 0, retSave.Length)
-                        fs.Flush()
-                        fs.Close()
-                    End Using
-                End If
+                Using fs As New FileStream(sPath, FileMode.Create, FileAccess.Write)
+                    fs.Write(retSave, 0, retSave.Length)
+                    fs.Flush()
+                    fs.Close()
+                End Using
             Catch ex As Exception
                 logger.Error(ex, New StackFrame().GetMethod().Name)
             End Try

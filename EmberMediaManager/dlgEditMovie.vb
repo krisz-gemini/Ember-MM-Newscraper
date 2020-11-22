@@ -1501,6 +1501,13 @@ Public Class dlgEditMovie
             pnlTrailerPreviewNoPlayer.Visible = False
         End If
 
+        Dim paramsPosterEditor As New List(Of Object)(New Object() {New Panel})
+        ModulesManager.Instance.RunGeneric(Enums.ModuleEventType.PosterEditor_Movie, paramsPosterEditor, Nothing, True, tmpDBElement)
+        pnlPosterEditor.Controls.Add(DirectCast(paramsPosterEditor(0), Panel))
+        If String.IsNullOrEmpty(pnlPosterEditor.Controls.Item(0).Name) Then
+            tcEdit.TabPages.Remove(tpPosterEditor)
+        End If
+
         FillInfo()
     End Sub
 

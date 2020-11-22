@@ -810,6 +810,7 @@ Public Class Enums
         ''' <remarks></remarks>
         ScraperSingle_TVSeason = 63
         DuringUpdateDB_TV = 64
+        PosterEditor_Movie = 65
     End Enum
 
     Public Enum MovieBannerSize As Integer

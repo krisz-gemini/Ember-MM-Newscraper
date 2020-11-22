@@ -10,6 +10,7 @@ Public Class AutoCompleteBehavior(Of T)
     Private skipKeyPress As Boolean
     Private logger As Logger = LogManager.GetCurrentClassLogger()
     Private listDroppedOnPreviewKeyDown As Boolean = False
+    Private leaveHandled As Boolean
 
     Public Sub New(comboBox As ComboBox, itemProvider As Func(Of String, List(Of T)), displayMember As String, valueMember As String)
 
@@ -27,42 +28,56 @@ Public Class AutoCompleteBehavior(Of T)
         AddHandler Me.comboBox.SelectionChangeCommitted, New EventHandler(AddressOf Me.OnSelectionChangeCommitted)
         AddHandler Me.comboBox.KeyDown, New KeyEventHandler(AddressOf Me.OnKeyDown)
         AddHandler Me.comboBox.PreviewKeyDown, New PreviewKeyDownEventHandler(AddressOf Me.OnPreviewKeyDown)
+        AddHandler Me.comboBox.DropDownClosed, New EventHandler(AddressOf Me.DropDownClosed)
+        AddHandler Me.comboBox.Enter, New EventHandler(AddressOf Me.OnEnter)
+
     End Sub
 
     Private Sub OnLeave(sender As Object, e As EventArgs)
-        HandleLeaveOrEnter()
+        HandleLeave()
     End Sub
 
-    Private Sub OnSelectionChangeCommitted(sender As Object, e As EventArgs)
-        HandleLeaveOrEnter()
+    Private Sub OnEnter(sender As Object, e As EventArgs)
+        logger.Trace("OnEnter")
+        leaveHandled = False
+        lastText = comboBox.Text
     End Sub
 
-    Private Sub HandleLeaveOrEnter()
-        If comboBox.SelectedIndex < 0 Then
-            'we have to handle the case, when the user didn't selected from the list (first item would be selected)
+    Private Sub DropDownClosed(sender As Object, e As EventArgs)
+        logger.Trace("DropDownClosed")
+        HandleLeave()
+    End Sub
 
-            'we have to clear the items to be able to set the Text of the ComboBox 
-            comboBox.DataSource = Nothing
-            comboBox.DisplayMember = ""
-            comboBox.ValueMember = ""
 
-            'But... we cannot use empty list, so it's a workaround for the System.ArgumentOutOfRangeException with empty Item list
-            'workaround for the System.ArgumentOutOfRangeException with empty Item list
-            comboBox.Items.Add("")
+    Private Sub HandleLeave()
+        'we have to handle the case, when the user didn't selected from the list (first item would be selected)
+        If Not leaveHandled Then
+            'But only once (ClearDataSource() )
+            leaveHandled = True
 
-            'After the list has been closed we have to clear the dummy element
-            comboBox.BeginInvoke(New Action(AddressOf Me.ClearDummyItems))
+            logger.Trace("HandleLeaveOrEnter: idx={0}, text={1}, lastText={2}", comboBox.SelectedIndex, comboBox.Text, Me.lastText)
+
+            'we have to clear the DataSource to be able to set the Text of the ComboBox 
+            ClearDataSource()
 
             comboBox.Text = Me.lastText
-            Me.lastText = Nothing
 
             'SelectAll is the expected behavior (ComboBox.AutoCompleteMode)
             comboBox.SelectAll()
+        Else
+            logger.Trace("HandleLeave called twice")
         End If
     End Sub
 
+    Private Sub OnSelectionChangeCommitted(sender As Object, e As EventArgs)
+        logger.Trace("OnSelectionChangeCommitted: text={0}", comboBox.Text)
+        Me.lastText = comboBox.Text
+        'the user has selected form the list, so we don't have to handle the first item automatically selected behavior
+        Me.leaveHandled = True
+    End Sub
+
     Private Sub OnPreviewKeyDown(sender As Object, e As PreviewKeyDownEventArgs)
-        logger.Trace("cbName_PreviewKeyDown: " + CStr(e.KeyCode) + ", list: " + CStr(Me.comboBox.DroppedDown))
+        logger.Trace("OnPreviewKeyDown: keyCode={0}, droppedDown={1}", e.KeyCode, Me.comboBox.DroppedDown)
         If e.KeyCode = Keys.Enter Then
             If Me.comboBox.DroppedDown Then
                 'Workaround: OnPreviewKeyDown called twice, and DroppedDown is False on the second call
@@ -76,7 +91,7 @@ Public Class AutoCompleteBehavior(Of T)
     End Sub
 
     Private Sub OnKeyDown(sender As Object, e As KeyEventArgs)
-        logger.Trace("OnKeyDown: " + CStr(e.KeyCode) + ", list: " + CStr(Me.listDroppedOnPreviewKeyDown))
+        logger.Trace("OnKeyDown: keyCode={0}, listDroppedOnPreviewKeyDown={1}", e.KeyCode, Me.listDroppedOnPreviewKeyDown)
         If e.KeyCode = Keys.Enter AndAlso Me.listDroppedOnPreviewKeyDown Then
             logger.Trace("OnKeyDown: ENTER HANDLED")
             Me.listDroppedOnPreviewKeyDown = False
@@ -94,7 +109,7 @@ Public Class AutoCompleteBehavior(Of T)
     End Sub
 
     Private Sub OnKeyPress(sender As Object, e As KeyPressEventArgs)
-        logger.Trace("OnKeyPress: " + e.KeyChar)
+        logger.Trace("OnKeyPress: keyChar={0}", e.KeyChar)
         If Me.skipKeyPress Then
             Me.skipKeyPress = False
             Return
@@ -131,39 +146,62 @@ Public Class AutoCompleteBehavior(Of T)
             comboBox.DisplayMember = Me.displayMember
             comboBox.ValueMember = Me.valueMember
 
-            'FIXME: is it necessary?
-            'comboBox.SelectedIndex = -1
-
             If (currentSearchterm.Length >= 1 AndAlso comboBox.Items.Count > 0 AndAlso Not comboBox.DroppedDown) Then
-                'If the current searchterm Is empty we leave the dropdown list To whatever state it already had
+                'If the current searchterm Is empty we leave the dropdown list to whatever state it already had
                 comboBox.DroppedDown = True
                 comboBox.SelectedIndex = -1
 
-                'workaround For the fact the cursor disappears due To droppeddown=True  This Is a known bu.g plaguing combobox which microsoft denies To fix For years now
+                'workaround for the fact the cursor disappears due To droppeddown=True, this is a known bug plaguing combobox which microsoft denies to fix for years now
                 Cursor.Current = Cursors.Default
             ElseIf (comboBox.Items.Count = 0 AndAlso comboBox.DroppedDown) Then
-                comboBox.DataSource = Nothing
-                comboBox.DisplayMember = ""
-                comboBox.ValueMember = ""
-
-                'workaround for the System.ArgumentOutOfRangeException with empty Item list
-                comboBox.Items.Add("")
-
-                comboBox.SelectedIndex = -1
-                comboBox.DroppedDown = False
-                Me.lastText = Nothing
-
-                'After the list has been closed we have to clear the dummy element
-                comboBox.BeginInvoke(New Action(AddressOf Me.ClearDummyItems))
+                CloseDropDown()
             End If
-
         Finally
-            'Another workaround For a glitch which causes all text To be selected When there Is a matching entry which starts With the exact text being typed In
+            'Another workaround for a glitch which causes all text to be selected when there is a matching entry which starts with the exact text being typed In
             comboBox.Text = currentSearchterm
             comboBox.Select(Math.Min(selectionStart, currentSearchterm.Length), Math.Min(selectionLength, currentSearchterm.Length - selectionStart))
             comboBox.ResumeLayout(True)
+            logger.Trace("ReevaluateCompletionList finished")
         End Try
 
+    End Sub
+
+    Private Sub CloseDropDown()
+        If Not comboBox.DroppedDown Then
+            Return
+        End If
+
+        'workaround for the System.ArgumentOutOfRangeException with empty Item list
+        If comboBox.Items.Count = 0 Then
+            'we have to clear the DataSource to be able to add the dummy item
+            '(yes, yes... it's a workaround to be able to do the next workaround)
+            ClearDataSource()
+
+            'workaround for the System.ArgumentOutOfRangeException with empty Item list
+            comboBox.Items.Add(String.Empty)
+
+            'After the list has been closed we have to clear the dummy element
+            comboBox.BeginInvoke(New Action(AddressOf Me.ClearDummyItems))
+        End If
+
+        comboBox.SelectedIndex = -1
+        comboBox.DroppedDown = False
+
+    End Sub
+
+    Private Sub ClearDataSource()
+        logger.Trace("ClearDataSource: text={0}, dropped={1}", comboBox.Text, comboBox.DroppedDown)
+
+        'setting DataSource to Nothing also set Text to Empty, so we save and restore the Text
+        Dim textBefore = Me.comboBox.Text
+        Try
+            'we have to clear the items to be able to set the Text of the ComboBox 
+            comboBox.DataSource = Nothing
+            comboBox.DisplayMember = String.Empty
+            comboBox.ValueMember = String.Empty
+        Finally
+            comboBox.Text = textBefore
+        End Try
     End Sub
 
     Private Sub ClearDummyItems()

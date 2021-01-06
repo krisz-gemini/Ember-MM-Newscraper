@@ -1454,7 +1454,7 @@ Public Class Scraper
                     Movies = APIResult.Result
                 Else
                     APIResult = Task.Run(Function() _client.SearchMovieAsync(strMovie, Page, _addonSettings.GetAdultItems, iYear))
-                    FixTMBDFallbackToOriginalTitle(APIResult.Result, strMovie, Page, _addonSettings.GetAdultItems, iYear)
+                    FixTMBDFallbackToOriginalTitle(APIResult.Result, strMovie, iYear, _addonSettings.GetAdultItems, Page)
                     Movies = APIResult.Result
                 End If
             End While

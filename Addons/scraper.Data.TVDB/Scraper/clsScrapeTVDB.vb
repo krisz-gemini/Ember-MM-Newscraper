@@ -18,31 +18,17 @@
 ' # along with Ember Media Manager.  If not, see <http://www.gnu.org/licenses/>. #
 ' ################################################################################
 
-Imports System.IO
 Imports EmberAPI
 Imports NLog
-Imports System.Xml.Serialization
+Imports System.IO
 
 Namespace TVDBs
 
     Public Class SearchResults
 
-#Region "Fields"
-
-        Private _Matches As New List(Of MediaContainers.TVShow)
-
-#End Region 'Fields
-
 #Region "Properties"
 
-        Public Property Matches() As List(Of MediaContainers.TVShow)
-            Get
-                Return _Matches
-            End Get
-            Set(ByVal value As List(Of MediaContainers.TVShow))
-                _Matches = value
-            End Set
-        End Property
+        Public ReadOnly Property Matches() As New List(Of MediaContainers.TVShow)
 
 #End Region 'Properties
 
@@ -52,14 +38,14 @@ Namespace TVDBs
 
 #Region "Fields"
 
-        Shared logger As Logger = NLog.LogManager.GetCurrentClassLogger()
+        Shared _Logger As Logger = LogManager.GetCurrentClassLogger()
 
-        Friend WithEvents bwTVDB As New System.ComponentModel.BackgroundWorker
+        Friend WithEvents bwTVDB As New ComponentModel.BackgroundWorker
 
+        Private _SpecialSettings As TVDB_Data.SpecialSettings
+        Private _PosterUrl As String
         Private _TVDBApi As TVDB.Web.WebInterface
         Private _TVDBMirror As TVDB.Model.Mirror
-        Private _SpecialSettings As TVDB_Data.SpecialSettings
-        Private _sPoster As String
 
 
 #End Region 'Fields
@@ -97,7 +83,7 @@ Namespace TVDBs
                 _TVDBMirror = New TVDB.Model.Mirror With {.Address = "http://thetvdb.com", .ContainsBannerFile = True, .ContainsXmlFile = True, .ContainsZipFile = False}
 
             Catch ex As Exception
-                logger.Error(ex, New StackFrame().GetMethod().Name)
+                _Logger.Error(ex, New StackFrame().GetMethod().Name)
             End Try
         End Sub
 
@@ -152,17 +138,18 @@ Namespace TVDBs
             End If
 
             If Shows.Count > 0 Then
-                Dim t1 As String = String.Empty
-                Dim t2 As String = String.Empty
+                Dim strTitle As String = String.Empty
+                Dim strPremiered As String = String.Empty
                 For Each aShow In Shows
                     If aShow.Name IsNot Nothing AndAlso Not String.IsNullOrEmpty(aShow.Name) Then
-                        t1 = aShow.Name
-                        If Not String.IsNullOrEmpty(CStr(aShow.FirstAired)) Then
-                            t2 = CStr(aShow.FirstAired.Year)
+                        strTitle = aShow.Name
+                        If Not String.IsNullOrEmpty(aShow.FirstAired.ToString) Then
+                            strPremiered = aShow.FirstAired.Year.ToString
                         End If
-                        Dim lNewShow As MediaContainers.TVShow = New MediaContainers.TVShow(String.Empty, t1, t2)
-                        lNewShow.TVDB = CStr(aShow.Id)
-                        R.Matches.Add(lNewShow)
+                        R.Matches.Add(New MediaContainers.TVShow With {
+                                      .Premiered = strPremiered,
+                                      .Title = strTitle,
+                                      .TMDB = aShow.Id.ToString})
                     End If
                 Next
             End If
@@ -285,9 +272,9 @@ Namespace TVDBs
             'Posters (only for SearchResult dialog, auto fallback to "en" by TVDB)
             If GetPoster Then
                 If TVShowInfo.Series.Poster IsNot Nothing AndAlso Not String.IsNullOrEmpty(TVShowInfo.Series.Poster) Then
-                    _sPoster = String.Concat(_TVDBMirror.Address, "/banners/", TVShowInfo.Series.Poster)
+                    _PosterUrl = String.Concat(_TVDBMirror.Address, "/banners/", TVShowInfo.Series.Poster)
                 Else
-                    _sPoster = String.Empty
+                    _PosterUrl = String.Empty
                 End If
             End If
 
@@ -295,7 +282,10 @@ Namespace TVDBs
 
             'Premiered
             If FilteredOptions.bMainPremiered Then
-                nTVShow.Premiered = CStr(TVShowInfo.Series.FirstAired)
+                If Not TVShowInfo.Series.FirstAired = Date.MinValue Then
+                    'always save date in same date format not depending on users language setting!
+                    nTVShow.Premiered = TVShowInfo.Series.FirstAired.ToString("yyyy-MM-dd")
+                End If
             End If
 
             If bwTVDB.CancellationPending Then Return Nothing
@@ -382,7 +372,7 @@ Namespace TVDBs
                     Return Nothing
                 End If
             Catch ex As Exception
-                logger.Error(String.Concat("TVDB Scraper: Can't get informations for TV Show with ID: ", tvdbID))
+                _Logger.Error(String.Concat("TVDB Scraper: Can't get informations for TV Show with ID: ", tvdbID))
                 Return Nothing
             End Try
         End Function
@@ -480,17 +470,11 @@ Namespace TVDBs
                 End If
             End If
 
-            'Aired
+            'Aired 
             If FilteredOptions.bEpisodeAired Then
-                Dim ScrapedDate As String = CStr(EpisodeInfo.FirstAired)
-                If Not String.IsNullOrEmpty(ScrapedDate) Then
-                    Dim RelDate As Date
-                    If Date.TryParse(ScrapedDate, RelDate) Then
-                        'always save date in same date format not depending on users language setting!
-                        nEpisode.Aired = RelDate.ToString("yyyy-MM-dd")
-                    Else
-                        nEpisode.Aired = ScrapedDate
-                    End If
+                If Not EpisodeInfo.FirstAired = Date.MinValue Then
+                    'always save date in same date format not depending on users language setting!
+                    nEpisode.Aired = EpisodeInfo.FirstAired.ToString("yyyy-MM-dd")
                 End If
             End If
 
@@ -638,7 +622,7 @@ Namespace TVDBs
 
                 Case SearchType.SearchDetails_TVShow
                     Dim showInfo As MediaContainers.TVShow = DirectCast(Res.Result, MediaContainers.TVShow)
-                    RaiseEvent SearchInfoDownloaded(_sPoster, showInfo)
+                    RaiseEvent SearchInfoDownloaded(_PosterUrl, showInfo)
             End Select
         End Sub
 
@@ -678,4 +662,3 @@ Namespace TVDBs
     End Class
 
 End Namespace
-

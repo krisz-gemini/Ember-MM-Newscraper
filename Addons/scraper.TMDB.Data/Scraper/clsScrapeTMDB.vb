@@ -356,9 +356,9 @@ Public Class Scraper
             If Result.Releases IsNot Nothing AndAlso Result.Releases.Countries IsNot Nothing AndAlso Result.Releases.Countries.Count > 0 Then
                 For Each cCountry In Result.Releases.Countries
                     If Not String.IsNullOrEmpty(cCountry.Certification) Then
-                        Dim CertificationLanguage = APIXML.CertLanguagesXML.Language.FirstOrDefault(Function(l) l.abbreviation = cCountry.Iso_3166_1.ToLower)
-                        If CertificationLanguage IsNot Nothing AndAlso CertificationLanguage.name IsNot Nothing AndAlso Not String.IsNullOrEmpty(CertificationLanguage.name) Then
-                            nMovie.Certifications.Add(String.Concat(CertificationLanguage.name, ":", cCountry.Certification))
+                        Dim CertificationLanguage = APIXML.CertificationLanguages.Languages.FirstOrDefault(Function(l) l.Abbreviation = cCountry.Iso_3166_1.ToLower)
+                        If CertificationLanguage IsNot Nothing AndAlso CertificationLanguage.Name IsNot Nothing AndAlso Not String.IsNullOrEmpty(CertificationLanguage.Name) Then
+                            nMovie.Certifications.Add(String.Concat(CertificationLanguage.Name, ":", cCountry.Certification))
                         Else
                             _Logger.Warn("Unhandled certification language encountered: {0}", cCountry.Iso_3166_1.ToLower)
                         End If
@@ -466,20 +466,15 @@ Public Class Scraper
 
         'ReleaseDate
         If FilteredOptions.bMainRelease Then
-            Dim strScrapedDate As String = String.Empty
-            If Not String.IsNullOrEmpty(CStr(Result.ReleaseDate)) Then
-                strScrapedDate = CStr(Result.ReleaseDate)
-            ElseIf RunFallback_Movie(Result.Id) AndAlso Not String.IsNullOrEmpty(CStr(_Fallback_Movie.ReleaseDate)) Then
-                strScrapedDate = CStr(_Fallback_Movie.ReleaseDate)
+            Dim nDate As Date? = Nothing
+            If Result.ReleaseDate.HasValue Then
+                nDate = Result.ReleaseDate.Value
+            ElseIf RunFallback_Movie(Result.Id) AndAlso _Fallback_Movie.ReleaseDate.HasValue Then
+                nDate = _Fallback_Movie.ReleaseDate.Value
             End If
-            If Not String.IsNullOrEmpty(strScrapedDate) Then
-                Dim RelDate As Date
-                If Date.TryParse(strScrapedDate, RelDate) Then
-                    'always save date in same date format not depending on users language setting!
-                    nMovie.ReleaseDate = RelDate.ToString("yyyy-MM-dd")
-                Else
-                    nMovie.ReleaseDate = strScrapedDate
-                End If
+            If nDate.HasValue Then
+                'always save date in same date format not depending on users language setting!
+                nMovie.ReleaseDate = nDate.Value.ToString("yyyy-MM-dd")
             End If
         End If
 
@@ -539,7 +534,7 @@ Public Class Scraper
             For Each aTrailer In nTrailers
                 Dim nTrailer = YouTube.Scraper.GetVideoDetails(aTrailer.Key)
                 If nTrailer IsNot Nothing Then
-                    nMovie.Trailer = nTrailer.URLWebsite
+                    nMovie.Trailer = nTrailer.UrlWebsite
                     Exit For
                 End If
             Next
@@ -549,10 +544,14 @@ Public Class Scraper
 
         'Year
         If FilteredOptions.bMainYear Then
-            If Not String.IsNullOrEmpty(CStr(Result.ReleaseDate)) Then
-                nMovie.Year = CStr(Result.ReleaseDate.Value.Year)
-            ElseIf RunFallback_Movie(Result.Id) AndAlso Not String.IsNullOrEmpty(CStr(_Fallback_Movie.ReleaseDate)) Then
-                nMovie.Year = CStr(_Fallback_Movie.ReleaseDate.Value.Year)
+            Dim nDate As Date? = Nothing
+            If Result.ReleaseDate.HasValue Then
+                nDate = Result.ReleaseDate.Value
+            ElseIf RunFallback_Movie(Result.Id) AndAlso _Fallback_Movie.ReleaseDate.HasValue Then
+                nDate = _Fallback_Movie.ReleaseDate.Value
+            End If
+            If nDate.HasValue Then
+                nMovie.Year = nDate.Value.Year.ToString
             End If
         End If
 
@@ -686,17 +685,13 @@ Public Class Scraper
 
         'Aired
         If filteredOptions.bEpisodeAired Then
-            If Not String.IsNullOrEmpty(CStr(Result.AirDate)) Then
-                Dim ScrapedDate As String = CStr(Result.AirDate)
-                If Not String.IsNullOrEmpty(ScrapedDate) AndAlso Not ScrapedDate = "00:00:00" Then
-                    Dim RelDate As Date
-                    If Date.TryParse(ScrapedDate, RelDate) Then
-                        'always save date in same date format not depending on users language setting!
-                        nTVEpisode.Aired = RelDate.ToString("yyyy-MM-dd")
-                    Else
-                        nTVEpisode.Aired = ScrapedDate
-                    End If
-                End If
+            Dim nDate As Date? = Nothing
+            If Result.AirDate.HasValue Then
+                nDate = Result.AirDate
+            End If
+            If nDate.HasValue Then
+                'always save date in same date format not depending on users language setting!
+                nTVEpisode.Aired = nDate.Value.ToString("yyyy-MM-dd")
             End If
         End If
 
@@ -783,17 +778,13 @@ Public Class Scraper
 
                 'Aired
                 If filteredOptions.bSeasonAired Then
-                    If Result.AirDate IsNot Nothing Then
-                        Dim ScrapedDate As String = CStr(Result.AirDate)
-                        If Not String.IsNullOrEmpty(ScrapedDate) Then
-                            Dim RelDate As Date
-                            If Date.TryParse(ScrapedDate, RelDate) Then
-                                'always save date in same date format not depending on users language setting!
-                                nTVSeason.Aired = RelDate.ToString("yyyy-MM-dd")
-                            Else
-                                nTVSeason.Aired = ScrapedDate
-                            End If
-                        End If
+                    Dim nDate As Date? = Nothing
+                    If Result.AirDate.HasValue Then
+                        nDate = Result.AirDate
+                    End If
+                    If nDate.HasValue Then
+                        'always save date in same date format not depending on users language setting!
+                        nTVSeason.Aired = nDate.Value.ToString("yyyy-MM-dd")
                     End If
                 End If
 
@@ -852,17 +843,13 @@ Public Class Scraper
 
         'Aired
         If filteredOptions.bSeasonAired Then
-            If Result.AirDate IsNot Nothing Then
-                Dim ScrapedDate As String = CStr(Result.AirDate)
-                If Not String.IsNullOrEmpty(ScrapedDate) Then
-                    Dim RelDate As Date
-                    If Date.TryParse(ScrapedDate, RelDate) Then
-                        'always save date in same date format not depending on users language setting!
-                        nTVSeason.Aired = RelDate.ToString("yyyy-MM-dd")
-                    Else
-                        nTVSeason.Aired = ScrapedDate
-                    End If
-                End If
+            Dim nDate As Date? = Nothing
+            If Result.AirDate.HasValue Then
+                nDate = Result.AirDate
+            End If
+            If nDate.HasValue Then
+                'always save date in same date format not depending on users language setting!
+                nTVSeason.Aired = nDate.Value.ToString("yyyy-MM-dd")
             End If
         End If
 
@@ -940,9 +927,9 @@ Public Class Scraper
                 If Result.ContentRatings IsNot Nothing AndAlso Result.ContentRatings.Results IsNot Nothing AndAlso Result.ContentRatings.Results.Count > 0 Then
                     For Each aCountry In Result.ContentRatings.Results
                         If Not String.IsNullOrEmpty(aCountry.Rating) Then
-                            Dim CertificationLanguage = APIXML.CertLanguagesXML.Language.FirstOrDefault(Function(l) l.abbreviation = aCountry.Iso_3166_1.ToLower)
-                            If CertificationLanguage IsNot Nothing AndAlso CertificationLanguage.name IsNot Nothing AndAlso Not String.IsNullOrEmpty(CertificationLanguage.name) Then
-                                nTVShow.Certifications.Add(String.Concat(CertificationLanguage.name, ":", aCountry.Rating))
+                            Dim CertificationLanguage = APIXML.CertificationLanguages.Languages.FirstOrDefault(Function(l) l.Abbreviation = aCountry.Iso_3166_1.ToLower)
+                            If CertificationLanguage IsNot Nothing AndAlso CertificationLanguage.Name IsNot Nothing AndAlso Not String.IsNullOrEmpty(CertificationLanguage.Name) Then
+                                nTVShow.Certifications.Add(String.Concat(CertificationLanguage.Name, ":", aCountry.Rating))
                             Else
                                 _Logger.Warn("Unhandled certification language encountered: {0}", aCountry.Iso_3166_1.ToLower)
                             End If
@@ -1013,20 +1000,15 @@ Public Class Scraper
 
             'Premiered
             If filteredOptions.bMainPremiered Then
-                Dim strScrapedDate As String = String.Empty
-                If Not String.IsNullOrEmpty(CStr(Result.FirstAirDate)) Then
-                    strScrapedDate = CStr(Result.FirstAirDate)
-                ElseIf RunFallback_TVShow(Result.Id) AndAlso Not String.IsNullOrEmpty(CStr(_Fallback_TVShow.FirstAirDate)) Then
-                    strScrapedDate = CStr(_Fallback_TVShow.FirstAirDate)
+                Dim nDate As Date? = Nothing
+                If Result.FirstAirDate.HasValue Then
+                    nDate = Result.FirstAirDate
+                ElseIf RunFallback_TVShow(Result.Id) AndAlso _Fallback_TVShow.FirstAirDate.HasValue Then
+                    nDate = _Fallback_TVShow.FirstAirDate
                 End If
-                If Not String.IsNullOrEmpty(strScrapedDate) Then
-                    Dim RelDate As Date
-                    If Date.TryParse(strScrapedDate, RelDate) Then
-                        'always save date in same date format not depending on users language setting!
-                        nTVShow.Premiered = RelDate.ToString("yyyy-MM-dd")
-                    Else
-                        nTVShow.Premiered = strScrapedDate
-                    End If
+                If nDate.HasValue Then
+                    'always save date in same date format not depending on users language setting!
+                    nTVShow.Premiered = nDate.Value.ToString("yyyy-MM-dd")
                 End If
             End If
 
@@ -1484,21 +1466,21 @@ Public Class Scraper
         End If
 
         If MovieSets.TotalResults > 0 Then
-            Dim t1 As String = String.Empty
-            Dim t2 As String = String.Empty
-            Dim t3 As String = String.Empty
+            Dim strTMDbId As String = String.Empty
+            Dim strTitle As String = String.Empty
+            Dim strPlot As String = String.Empty
             TotP = MovieSets.TotalPages
             While Page <= TotP AndAlso Page <= 3
                 If MovieSets.Results IsNot Nothing Then
                     For Each aMovieSet In MovieSets.Results
-                        t1 = CStr(aMovieSet.Id)
+                        strTMDbId = aMovieSet.Id.ToString
                         If aMovieSet.Name IsNot Nothing AndAlso Not String.IsNullOrEmpty(aMovieSet.Name) Then
-                            t2 = aMovieSet.Name
+                            strTitle = aMovieSet.Name
                         End If
                         'If aMovieSet.overview IsNot Nothing AndAlso Not String.IsNullOrEmpty(aMovieSet.overview) Then
-                        '    t3 = aMovieSet.overview
+                        '    strPlot = aMovieSet.overview
                         'End If
-                        R.Matches.Add(New MediaContainers.MovieSet(t1, t2, t3))
+                        R.Matches.Add(New MediaContainers.MovieSet With {.TMDB = strTMDbId, .Title = strTitle})
                     Next
                 End If
                 Page = Page + 1
@@ -1536,25 +1518,27 @@ Public Class Scraper
         End If
 
         If Shows.TotalResults > 0 Then
-            Dim t1 As String = String.Empty
-            Dim t2 As String = String.Empty
+            Dim strTitle As String = String.Empty
+            Dim strYear As String = String.Empty
             TotP = Shows.TotalPages
             While Page <= TotP AndAlso Page <= 3
                 If Shows.Results IsNot Nothing Then
                     For Each aShow In Shows.Results
                         If aShow.Name Is Nothing OrElse (aShow.Name IsNot Nothing AndAlso String.IsNullOrEmpty(aShow.Name)) Then
                             If aShow.OriginalName IsNot Nothing AndAlso Not String.IsNullOrEmpty(aShow.OriginalName) Then
-                                t1 = aShow.OriginalName
+                                strTitle = aShow.OriginalName
                             End If
                         Else
-                            t1 = aShow.Name
+                            strTitle = aShow.Name
                         End If
                         If aShow.FirstAirDate IsNot Nothing AndAlso Not String.IsNullOrEmpty(CStr(aShow.FirstAirDate)) Then
-                            t2 = CStr(aShow.FirstAirDate.Value.Year)
+                            strYear = CStr(aShow.FirstAirDate.Value.Year)
                         End If
-                        Dim lNewShow As MediaContainers.TVShow = New MediaContainers.TVShow(String.Empty, t1, t2)
-                        lNewShow.TMDB = CStr(aShow.Id)
-                        R.Matches.Add(lNewShow)
+                        R.Matches.Add(New MediaContainers.TVShow With {
+                                      .Premiered = strYear,
+                                      .Title = strTitle,
+                                      .TMDB = aShow.Id.ToString
+                                      })
                     Next
                 End If
                 Page = Page + 1

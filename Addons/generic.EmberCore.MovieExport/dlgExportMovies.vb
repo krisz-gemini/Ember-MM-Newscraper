@@ -107,7 +107,11 @@ Public Class dlgExportMovies
                     SQLcount.Read()
                     bwLoadInfo.ReportProgress(-1, SQLcount("mcount")) ' set maximum
                 End Using
-                SQLNewcommand.CommandText = String.Format("SELECT idMovie FROM '{0}' ORDER BY SortedTitle COLLATE NOCASE;", strCurrList_Movies)
+                If strCurrList_Movies = "movielist" Then
+                    SQLNewcommand.CommandText = String.Format("SELECT idMovie FROM '{0}' ORDER BY SortedTitle COLLATE NOCASE;", strCurrList_Movies)
+                Else
+                    SQLNewcommand.CommandText = String.Format("SELECT idMovie FROM '{0}';", strCurrList_Movies)
+                End If
                 Using SQLreader As SQLite.SQLiteDataReader = SQLNewcommand.ExecuteReader()
                     If SQLreader.HasRows Then
                         While SQLreader.Read()
@@ -141,7 +145,11 @@ Public Class dlgExportMovies
                     SQLcount.Read()
                     bwLoadInfo.ReportProgress(-1, SQLcount("mcount")) ' set maximum
                 End Using
-                SQLNewcommand.CommandText = String.Format("SELECT idShow FROM '{0}' ORDER BY SortedTitle COLLATE NOCASE;", strCurrList_TVShows)
+                If strCurrList_TVShows = "tvshowlist" Then
+                    SQLNewcommand.CommandText = String.Format("SELECT idShow FROM '{0}' ORDER BY SortedTitle COLLATE NOCASE;", strCurrList_TVShows)
+                Else
+                    SQLNewcommand.CommandText = String.Format("SELECT idShow FROM '{0}';", strCurrList_TVShows)
+                End If
                 Using SQLreader As SQLite.SQLiteDataReader = SQLNewcommand.ExecuteReader()
                     If SQLreader.HasRows Then
                         While SQLreader.Read()
@@ -352,16 +360,17 @@ Public Class dlgExportMovies
         cbList_TVShows.SelectedIndex = 0
     End Sub
 
-    Private Sub dlgExportMovies_Shown(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Shown
-        Activate()
+    'Private Sub dlgExportMovies_Shown(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Shown
+    '    Activate()
 
-        'Start worker
-        ShowStatus(True)
-        bwLoadInfo = New System.ComponentModel.BackgroundWorker
-        bwLoadInfo.WorkerSupportsCancellation = True
-        bwLoadInfo.WorkerReportsProgress = True
-        bwLoadInfo.RunWorkerAsync()
-    End Sub
+    '    'Start worker
+    '    ShowStatus(True)
+    '    bwLoadInfo = New System.ComponentModel.BackgroundWorker With {
+    '        .WorkerSupportsCancellation = True,
+    '        .WorkerReportsProgress = True
+    '    }
+    '    bwLoadInfo.RunWorkerAsync()
+    'End Sub
 
     Private Sub DoCancel()
         tslblStatus.Text = Master.eLang.GetString(178, "Canceling Compilation...")
@@ -465,9 +474,5 @@ Public Class dlgExportMovies
     End Sub
 
 #End Region 'Methods
-
-#Region "Nested Types"
-
-#End Region 'Nested Types
 
 End Class

@@ -223,6 +223,30 @@ Public Class dlgEditTVShow
         End If
     End Sub
 
+    Private Sub btnLocalThemePlay_Click(sender As Object, e As EventArgs) Handles btnLocalThemePlay.Click
+        Try
+            Dim tPath As String = String.Empty
+
+            If Not String.IsNullOrEmpty(txtLocalTheme.Text) Then
+                tPath = String.Concat("""", txtLocalTheme.Text, """")
+            End If
+
+            If Not String.IsNullOrEmpty(tPath) Then
+                If Master.isWindows Then
+                    Process.Start(tPath)
+                Else
+                    Using Explorer As New Process
+                        Explorer.StartInfo.FileName = "xdg-open"
+                        Explorer.StartInfo.Arguments = tPath
+                        Explorer.Start()
+                    End Using
+                End If
+            End If
+        Catch
+            MessageBox.Show(Master.eLang.GetString(1078, "The theme could not be played. This could due be you don't have the proper player to play the theme type."), Master.eLang.GetString(1079, "Error Playing Theme"), MessageBoxButtons.OK, MessageBoxIcon.Warning)
+        End Try
+    End Sub
+
     Private Sub btnRemoveBanner_Click(ByVal sender As Object, ByVal e As EventArgs) Handles btnRemoveBanner.Click
         pbBanner.Image = Nothing
         pbBanner.Tag = Nothing
@@ -280,8 +304,7 @@ Public Class dlgEditTVShow
     End Sub
 
     Private Sub btnRemoveTheme_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnRemoveTheme.Click
-        'ThemeStop()
-        tmpDBElement.Theme = New MediaContainers.Theme
+        tmpDBElement.Theme = New MediaContainers.MediaFile
         txtLocalTheme.Text = String.Empty
     End Sub
 
@@ -431,6 +454,26 @@ Public Class dlgEditTVShow
         Catch ex As Exception
             logger.Error(ex, New StackFrame().GetMethod().Name)
         End Try
+    End Sub
+
+    Private Sub btnSetExtrafanartsScrape_Click(ByVal sender As Object, ByVal e As EventArgs) Handles btnSetExtrafanartsScrape.Click
+        Dim aContainer As New MediaContainers.SearchResultsContainer
+        Dim ScrapeModifiers As New Structures.ScrapeModifiers
+
+        Cursor = Cursors.WaitCursor
+        Functions.SetScrapeModifiers(ScrapeModifiers, Enums.ModifierType.MainExtrafanarts, True)
+        If Not ModulesManager.Instance.ScrapeImage_TV(tmpDBElement, aContainer, ScrapeModifiers, True) Then
+            If aContainer.MainFanarts.Count > 0 Then
+                Dim dlgImgS = New dlgImgSelect()
+                If dlgImgS.ShowDialog(tmpDBElement, aContainer, ScrapeModifiers) = DialogResult.OK Then
+                    tmpDBElement.ImagesContainer.Extrafanarts = dlgImgS.Result.ImagesContainer.Extrafanarts
+                    RefreshExtrafanarts()
+                End If
+            Else
+                MessageBox.Show(Master.eLang.GetString(970, "No Fanarts found"), String.Empty, MessageBoxButtons.OK, MessageBoxIcon.Information)
+            End If
+        End If
+        Cursor = Cursors.Default
     End Sub
 
     Private Sub btnSetFanartDL_Click(ByVal sender As Object, ByVal e As EventArgs) Handles btnSetFanartDL.Click
@@ -803,26 +846,15 @@ Public Class dlgEditTVShow
         End Try
     End Sub
 
-    Private Sub btnSetThemeScrape_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnSetThemeScrape.Click
-        Dim dThemeSelect As dlgThemeSelect
-        Dim tList As New List(Of MediaContainers.Theme)
-
-        'ThemeStop()
-        If Not ModulesManager.Instance.ScrapeTheme_Movie(tmpDBElement, Enums.ModifierType.MainTheme, tList) Then
-            If tList.Count > 0 Then
-                dThemeSelect = New dlgThemeSelect()
-                If dThemeSelect.ShowDialog(tmpDBElement, tList, True) = DialogResult.OK Then
-                    tmpDBElement.Theme = dThemeSelect.Result
-                    LoadTheme(tmpDBElement.Theme)
-                End If
-            Else
-                MessageBox.Show(Master.eLang.GetString(1163, "No Themes found"), String.Empty, MessageBoxButtons.OK, MessageBoxIcon.Information)
-            End If
+    Private Sub btnSetThemeScrape_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnSetThemeScrape.Click, btnSetThemeDL.Click
+        Dim dglSelectTheme As New dlgMediaFileSelect(Enums.ModifierType.MainTheme)
+        If dglSelectTheme.ShowDialog(tmpDBElement, New List(Of MediaContainers.MediaFile)) = DialogResult.OK Then
+            tmpDBElement.Theme = dglSelectTheme.Result
+            LoadTheme(tmpDBElement.Theme)
         End If
     End Sub
 
     Private Sub btnSetThemeLocal_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnSetThemeLocal.Click
-        'ThemeStop()
         With ofdLocalFiles
             .InitialDirectory = tmpDBElement.ShowPath
             .Filter = FileUtils.Common.GetOpenFileDialogFilter_Theme()
@@ -830,7 +862,7 @@ Public Class dlgEditTVShow
         End With
 
         If ofdLocalFiles.ShowDialog() = DialogResult.OK Then
-            tmpDBElement.Theme = New MediaContainers.Theme With {.LocalFilePath = ofdLocalFiles.FileName}
+            tmpDBElement.Theme = New MediaContainers.MediaFile With {.LocalFilePath = ofdLocalFiles.FileName}
             tmpDBElement.Theme.LoadAndCache()
             LoadTheme(tmpDBElement.Theme)
         End If
@@ -1128,15 +1160,15 @@ Public Class dlgEditTVShow
         cbOrdering.SelectedIndex = tmpDBElement.Ordering
         cbEpisodeSorting.SelectedIndex = tmpDBElement.EpisodeSorting
         If cbSourceLanguage.Items.Count > 0 Then
-            Dim tLanguage As languageProperty = APIXML.ScraperLanguagesXML.Languages.FirstOrDefault(Function(l) l.Abbreviation = tmpDBElement.Language)
+            Dim tLanguage = APIXML.ScraperLanguages.Languages.FirstOrDefault(Function(l) l.Abbreviation = tmpDBElement.Language)
             If tLanguage IsNot Nothing Then
                 cbSourceLanguage.Text = tLanguage.Description
             Else
-                tLanguage = APIXML.ScraperLanguagesXML.Languages.FirstOrDefault(Function(l) l.Abbreviation.StartsWith(tmpDBElement.Language_Main))
+                tLanguage = APIXML.ScraperLanguages.Languages.FirstOrDefault(Function(l) l.Abbreviation.StartsWith(tmpDBElement.Language_Main))
                 If tLanguage IsNot Nothing Then
                     cbSourceLanguage.Text = tLanguage.Description
                 Else
-                    cbSourceLanguage.Text = APIXML.ScraperLanguagesXML.Languages.FirstOrDefault(Function(l) l.Abbreviation = "en-US").Description
+                    cbSourceLanguage.Text = APIXML.ScraperLanguages.Languages.FirstOrDefault(Function(l) l.Abbreviation = "en-US").Description
                 End If
             End If
         End If
@@ -1335,7 +1367,7 @@ Public Class dlgEditTVShow
 
         'Theme
         If Master.eSettings.TvShowThemeAnyEnabled Then
-            If Not String.IsNullOrEmpty(tmpDBElement.Theme.LocalFilePath) OrElse Not String.IsNullOrEmpty(tmpDBElement.Theme.URLAudioStream) Then
+            If Not String.IsNullOrEmpty(tmpDBElement.Theme.LocalFilePath) OrElse Not String.IsNullOrEmpty(tmpDBElement.Theme.UrlAudioStream) Then
                 LoadTheme(tmpDBElement.Theme)
             End If
         Else
@@ -1374,11 +1406,11 @@ Public Class dlgEditTVShow
         lbMPAA.Items.AddRange(APIXML.GetRatingList_TV)
     End Sub
 
-    Private Sub LoadTheme(ByVal Theme As MediaContainers.Theme)
+    Private Sub LoadTheme(ByVal Theme As MediaContainers.MediaFile)
         txtLocalTheme.Text =
             If(Theme.LocalFilePathSpecified, Theme.LocalFilePath,
-            If(Theme.URLAudioStreamSpecified, Theme.URLAudioStream,
-            If(Theme.URLWebsiteSpecified, Theme.URLWebsite, String.Empty)))
+            If(Theme.UrlAudioStreamSpecified, Theme.UrlAudioStream,
+            If(Theme.UrlWebsiteSpecified, Theme.UrlWebsite, String.Empty)))
     End Sub
 
     Private Sub lvActors_ColumnClick(ByVal sender As Object, ByVal e As ColumnClickEventArgs) Handles lvActors.ColumnClick
@@ -1883,7 +1915,7 @@ Public Class dlgEditTVShow
         tmpDBElement.EpisodeSorting = DirectCast(cbEpisodeSorting.SelectedIndex, Enums.EpisodeSorting)
 
         If Not String.IsNullOrEmpty(cbSourceLanguage.Text) Then
-            tmpDBElement.Language = APIXML.ScraperLanguagesXML.Languages.FirstOrDefault(Function(l) l.Description = cbSourceLanguage.Text).Abbreviation
+            tmpDBElement.Language = APIXML.ScraperLanguages.Languages.FirstOrDefault(Function(l) l.Description = cbSourceLanguage.Text).Abbreviation
             tmpDBElement.TVShow.Language = tmpDBElement.Language
         Else
             tmpDBElement.Language = "en-US"
@@ -2029,31 +2061,7 @@ Public Class dlgEditTVShow
         cbEpisodeSorting.Items.AddRange(New String() {Master.eLang.GetString(755, "Episode #"), Master.eLang.GetString(728, "Aired")})
 
         cbSourceLanguage.Items.Clear()
-        cbSourceLanguage.Items.AddRange((From lLang In APIXML.ScraperLanguagesXML.Languages Select lLang.Description).ToArray)
-    End Sub
-
-    Private Sub btnLocalThemePlay_Click(sender As Object, e As EventArgs) Handles btnLocalThemePlay.Click
-        Try
-            Dim tPath As String = String.Empty
-
-            If Not String.IsNullOrEmpty(txtLocalTheme.Text) Then
-                tPath = String.Concat("""", txtLocalTheme.Text, """")
-            End If
-
-            If Not String.IsNullOrEmpty(tPath) Then
-                If Master.isWindows Then
-                    Process.Start(tPath)
-                Else
-                    Using Explorer As New Process
-                        Explorer.StartInfo.FileName = "xdg-open"
-                        Explorer.StartInfo.Arguments = tPath
-                        Explorer.Start()
-                    End Using
-                End If
-            End If
-        Catch
-            MessageBox.Show(Master.eLang.GetString(270, "The trailer could not be played. This could be due to an invalid URI or you do not have the proper player to play the trailer type."), Master.eLang.GetString(271, "Error Playing Trailer"), MessageBoxButtons.OK, MessageBoxIcon.Warning)
-        End Try
+        cbSourceLanguage.Items.AddRange((From lLang In APIXML.ScraperLanguages.Languages Select lLang.Description).ToArray)
     End Sub
 
     Private Sub txtLocalTheme_TextChanged(sender As Object, e As EventArgs) Handles txtLocalTheme.TextChanged

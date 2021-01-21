@@ -103,6 +103,29 @@ Namespace FileUtils
             End If
         End Sub
 
+        Public Shared Sub CreateFileBackup(ByVal filePath As String)
+            Dim fileToBackup As New FileInfo(filePath)
+            If fileToBackup.Exists Then
+                Try
+                    Dim i As Integer = 1
+                    Dim strNewFileName As String = String.Concat(fileToBackup.Name, "_bak")
+                    'in case there is already a backup of the same file
+                    If File.Exists(Path.Combine(fileToBackup.Directory.FullName, strNewFileName)) Then
+                        Dim alternateFileName = strNewFileName
+                        While File.Exists(Path.Combine(fileToBackup.Directory.FullName, alternateFileName))
+                            alternateFileName = String.Format("{0}({1})", strNewFileName, i)
+                            i += 1
+                        End While
+                        strNewFileName = alternateFileName
+                    End If
+                    File.Copy(fileToBackup.FullName, Path.Combine(fileToBackup.Directory.FullName, strNewFileName))
+                    logger.Info(String.Format("[FileUtils] [CreateFileBackup] file ""{0}"" copied to ""{1}""", fileToBackup.FullName, Path.Combine(fileToBackup.Directory.FullName, strNewFileName)))
+                Catch ex As Exception
+                    logger.Error(ex, New StackFrame().GetMethod().Name)
+                End Try
+            End If
+        End Sub
+
         Public Shared Sub DirectoryCopy(
                                        ByVal sourcePath As String,
                                        ByVal destinationPath As String,
@@ -2389,7 +2412,7 @@ Namespace FileUtils
 
 #Region "Fields"
 
-        Dim logger As Logger = LogManager.GetCurrentClassLogger()
+        Dim _Logger As Logger = LogManager.GetCurrentClassLogger()
 
 #End Region 'Fields
 
@@ -2397,10 +2420,10 @@ Namespace FileUtils
         ''' <summary>
         ''' Event that is raised when SortFiles desires the progress indicator to be updated
         ''' </summary>
-        ''' <param name="iPercent">Percentage complete</param>
-        ''' <param name="sStatus">Message to be displayed alongside the progress indicator</param>
+        ''' <param name="percent">Percentage complete</param>
+        ''' <param name="status">Message to be displayed alongside the progress indicator</param>
         ''' <remarks></remarks>
-        Public Event ProgressUpdated(ByVal iPercent As Integer, ByVal sStatus As String)
+        Public Event ProgressUpdated(ByVal percent As Integer, ByVal status As String)
 
 #End Region 'Events
 
@@ -2408,18 +2431,18 @@ Namespace FileUtils
         ''' <summary>
         ''' Reorganize the media files in the given folder into subfolders.
         ''' </summary>
-        ''' <param name="strSourcePath">Path to be sorted</param>
+        ''' <param name="sourcePath">Path to be sorted</param>
         ''' <remarks>Occasionally a directory will contain multiple media files (and meta-files) and 
         ''' this method will walk through the files in that directory and move each to its own unique subdirectory.
         ''' This will move all files with the same core name, without extension or fanart/trailer endings.</remarks>
-        Public Sub SortFiles(ByVal strSourcePath As String)
+        Public Sub SortFiles(ByVal sourcePath As String)
             'TODO Need to test what happens if sPath points to an existing FILE (and not just a directory)
             Dim iCount As Integer = 0
 
             Try
-                If Directory.Exists(strSourcePath) Then
+                If Directory.Exists(sourcePath) Then
                     'Get information about files in the directory
-                    Dim di As New DirectoryInfo(strSourcePath)
+                    Dim di As New DirectoryInfo(sourcePath)
                     Dim lFi As New List(Of FileInfo)
                     Dim lMediaList As IOrderedEnumerable(Of FileInfo)
 
@@ -2432,15 +2455,15 @@ Namespace FileUtils
                     'Create a list of all media files with a valid extension in the directory
                     lMediaList = lFi.Where(Function(f) Master.eSettings.FileSystemValidExts.Contains(f.Extension.ToLower) AndAlso
                              Not Regex.IsMatch(f.Name, String.Concat("[^\w\s]\s?(", AdvancedSettings.GetSetting("NotValidFileContains", "trailer|sample"), ")"), RegexOptions.IgnoreCase) AndAlso ((Master.eSettings.MovieSkipStackedSizeCheck AndAlso
-                            Common.isStacked(f.FullName)) OrElse (Not Convert.ToInt32(Master.eSettings.MovieSkipLessThan) > 0 OrElse f.Length >= Master.eSettings.MovieSkipLessThan * 1048576))).OrderBy(Function(f) f.FullName)
+                            Common.isStacked(f.FullName)) OrElse (Not Convert.ToInt32(Master.eSettings.MovieSkipLessThan) > 0 OrElse f.Length >= Master.eSettings.MovieSkipLessThan * 1048576))).OrderByDescending(Function(f) Path.GetFileNameWithoutExtension(f.FullName))
 
                     'For each valid file in the directory...
                     For Each sFile As FileInfo In lMediaList
                         Dim nMovie As New Database.DBElement(Enums.ContentType.Movie) With {.Filename = sFile.FullName, .IsSingle = False}
-                        RaiseEvent ProgressUpdated((iCount \ lMediaList.Count), String.Concat(Master.eLang.GetString(219, "Moving "), sFile.Name))
+                        RaiseEvent ProgressUpdated((iCount \ lMediaList.Count * 100), String.Concat(Master.eLang.GetString(219, "Moving "), sFile.Name))
 
                         'create a new directory for the movie
-                        Dim strNewPath As String = Path.Combine(strSourcePath, Path.GetFileNameWithoutExtension(Common.RemoveStackingMarkers(nMovie.Filename)))
+                        Dim strNewPath As String = Path.Combine(sourcePath, Path.GetFileNameWithoutExtension(Common.RemoveStackingMarkers(nMovie.Filename)))
                         If Not Directory.Exists(strNewPath) Then
                             Directory.CreateDirectory(strNewPath)
                         End If
@@ -2486,13 +2509,17 @@ Namespace FileUtils
                                 If File.Exists(String.Concat(a, t)) Then File.Move(String.Concat(a, t), Path.Combine(strNewPath, Path.GetFileName(String.Concat(a, t))))
                             Next
                         Next
+
+                        'search for files that starts with the same name like the file name
+                        For Each aFile In lFi.Where(Function(f) Not lMediaList.Contains(f) AndAlso File.Exists(f.FullName) AndAlso f.FullName.ToLower.StartsWith(Common.RemoveExtFromPath(nMovie.Filename).ToLower))
+                            aFile.MoveTo(Path.Combine(strNewPath, Path.GetFileName(aFile.Name)))
+                        Next
                         iCount += 1
                     Next
-
-                    RaiseEvent ProgressUpdated((iCount \ lMediaList.Count), Master.eLang.GetString(362, "Done "))
+                    RaiseEvent ProgressUpdated((100), Master.eLang.GetString(362, "Done"))
                 End If
             Catch ex As Exception
-                logger.Error(ex, New StackFrame().GetMethod().Name)
+                _Logger.Error(ex, New StackFrame().GetMethod().Name)
             End Try
         End Sub
 
@@ -2501,4 +2528,3 @@ Namespace FileUtils
     End Module
 
 End Namespace
-

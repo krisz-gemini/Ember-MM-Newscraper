@@ -18,13 +18,9 @@
 ' # along with Ember Media Manager.  If not, see <http://www.gnu.org/licenses/>. #
 ' ################################################################################
 
-'Imports System.Globalization
-'Imports System.IO
-'Imports System.IO.Compression
-'Imports System.Text
-Imports System.Text.RegularExpressions
 Imports EmberAPI
 Imports NLog
+Imports System.Text.RegularExpressions
 
 Namespace TelevisionTunes
 
@@ -33,7 +29,7 @@ Namespace TelevisionTunes
 #Region "Fields"
         Shared logger As Logger = LogManager.GetCurrentClassLogger()
         Private originaltitle As String
-        Private _themelist As New List(Of MediaContainers.Theme)
+        Private _themelist As New List(Of MediaContainers.MediaFile)
 
 #End Region 'Fields
 
@@ -49,11 +45,11 @@ Namespace TelevisionTunes
 
 #Region "Properties"
 
-        Public Property ThemeList() As List(Of MediaContainers.Theme)
+        Public Property ThemeList() As List(Of MediaContainers.MediaFile)
             Get
                 Return _themelist
             End Get
-            Set(ByVal value As List(Of MediaContainers.Theme))
+            Set(ByVal value As List(Of MediaContainers.MediaFile))
                 _themelist = value
             End Set
         End Property
@@ -63,7 +59,7 @@ Namespace TelevisionTunes
 #Region "Methods"
 
         Private Sub Clear()
-            _themelist = New List(Of MediaContainers.Theme)
+            _themelist = New List(Of MediaContainers.MediaFile)
         End Sub
 
         Private Sub GetThemes()
@@ -108,7 +104,15 @@ Namespace TelevisionTunes
                             tURL = GetDownloadURL(tWebURL)
 
                             If Not String.IsNullOrEmpty(tURL) Then
-                                _themelist.Add(New MediaContainers.Theme With {.URLAudioStream = tURL, .Description = tTitle, .Duration = tLength, .Bitrate = tBitrate, .URLWebsite = tWebURL, .Scraper = "TelevisionTunes"})
+                                Dim nTheme As New MediaContainers.MediaFile With {
+                                    .Duration = tLength,
+                                    .Scraper = "TelevisionTunes",
+                                    .Source = "TelevisionTunes",
+                                    .Title = tTitle,
+                                    .UrlWebsite = tWebURL
+                                }
+                                nTheme.Streams.AudioStreams.Add(New MediaContainers.MediaFile.AudioStream With {.Codec = Enums.AudioCodec.MP3, .FileExtension = ".mp3", .StreamUrl = tURL})
+                                _themelist.Add(nTheme)
                             End If
                         Next
 

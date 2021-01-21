@@ -18,7 +18,6 @@
 ' # along with Ember Media Manager.  If not, see <http://www.gnu.org/licenses/>. #
 ' ################################################################################
 
-Imports System.IO
 Imports EmberAPI
 
 Public Class frmSettingsHolder
@@ -63,22 +62,22 @@ Public Class frmSettingsHolder
     End Sub
 
     Private Sub LoadMovieTrailerQualities()
-        Dim items As New Dictionary(Of String, Enums.TrailerVideoQuality)
-        items.Add("1080p", Enums.TrailerVideoQuality.HD1080p)
-        items.Add("720p", Enums.TrailerVideoQuality.HD720p)
-        items.Add("480p", Enums.TrailerVideoQuality.HQ480p)
-        Me.cbTrailerPrefQual.DataSource = items.ToList
-        Me.cbTrailerPrefQual.DisplayMember = "Key"
-        Me.cbTrailerPrefQual.ValueMember = "Value"
+        Dim items As New Dictionary(Of String, Enums.VideoResolution)
+        items.Add("1080p", Enums.VideoResolution.HD1080p)
+        items.Add("720p", Enums.VideoResolution.HD720p)
+        items.Add("480p", Enums.VideoResolution.HQ480p)
+        cbTrailerPrefQual.DataSource = items.ToList
+        cbTrailerPrefQual.DisplayMember = "Key"
+        cbTrailerPrefQual.ValueMember = "Value"
     End Sub
 
     Public Sub New()
         InitializeComponent()
-        Me.SetUp()
+        SetUp()
     End Sub
 
     Sub orderChanged()
-        Dim order As Integer = ModulesManager.Instance.externalScrapersModules_Trailer_Movie.FirstOrDefault(Function(p) p.AssemblyName = Apple_trailer._AssemblyName).ModuleOrder
+        Dim order As Integer = ModulesManager.Instance.externalScrapersModules_Trailer_Movie.FirstOrDefault(Function(p) p.AssemblyName = Apple_Trailer._AssemblyName).ModuleOrder
         If ModulesManager.Instance.externalScrapersModules_Trailer_Movie.Count > 1 Then
             btnDown.Enabled = (order < ModulesManager.Instance.externalScrapersModules_Trailer_Movie.Count - 1)
             btnUp.Enabled = (order > 0)
@@ -89,11 +88,11 @@ Public Class frmSettingsHolder
     End Sub
 
     Sub SetUp()
-        Me.chkEnabled.Text = Master.eLang.GetString(774, "Enabled")
-        Me.gbScraperTrailerOpts.Text = Master.eLang.GetString(283, "Trailers - Scraper specific")
-        Me.lblInfoBottom.Text = String.Format(Master.eLang.GetString(790, "These settings are specific to this module.{0}Please refer to the global settings for more options."), Environment.NewLine)
-        Me.lblScraperOrder.Text = Master.eLang.GetString(168, "Scrape Order")
-        Me.lblTrailerPrefQual.Text = Master.eLang.GetString(800, "Preferred Quality:")
+        chkEnabled.Text = Master.eLang.GetString(774, "Enabled")
+        gbScraperTrailerOpts.Text = Master.eLang.GetString(283, "Trailers - Scraper specific")
+        lblInfoBottom.Text = String.Format(Master.eLang.GetString(790, "These settings are specific to this module.{0}Please refer to the global settings for more options."), Environment.NewLine)
+        lblScraperOrder.Text = Master.eLang.GetString(168, "Scrape Order")
+        lblTrailerPrefQual.Text = Master.eLang.GetString(800, "Preferred Quality:")
         LoadMovieTrailerQualities()
     End Sub
 

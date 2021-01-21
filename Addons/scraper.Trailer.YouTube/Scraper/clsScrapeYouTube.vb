@@ -24,14 +24,14 @@ Public Class Scraper
 
 #Region "Methods"
 
-        Public Function GetTrailers(ByVal strTitle As String) As List(Of MediaContainers.Trailer)
-            Dim alTrailers As New List(Of MediaContainers.Trailer)
-            alTrailers = YouTube.Scraper.SearchOnYouTube(String.Concat(strTitle, " ", Master.eSettings.MovieTrailerDefaultSearch))
-            For Each tTrailer In alTrailers
-                tTrailer.Scraper = "YouTube"
-            Next
-            Return alTrailers
-        End Function
+    Public Function GetTrailers(ByVal title As String) As List(Of MediaContainers.MediaFile)
+        Dim lstTrailers As New List(Of MediaContainers.MediaFile)
+        lstTrailers = YouTube.Scraper.SearchOnYouTube(String.Format("{0} {1}", title, Master.eSettings.MovieTrailerDefaultSearch))
+        For Each tTrailer In lstTrailers
+            tTrailer.Scraper = "YouTube"
+        Next
+        Return lstTrailers
+    End Function
 
 #End Region 'Methods
 
